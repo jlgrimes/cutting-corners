@@ -4,6 +4,7 @@ import { Container, Header, Left, Body, Right, Title, Content,
     CheckBox, 
     Row} from 'native-base';
 import { View, StyleSheet } from 'react-native'
+import { generateAPIUrl } from './const';
 
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
 var CANCEL_INDEX = 3;
@@ -52,7 +53,18 @@ export default class Home extends Component {
         this.state = {
             returnBackHome: false
         };
-      }
+    }
+
+    getDistance() {
+        // Example usage
+        let url = generateAPIUrl(origin="New York City", destination="Washington DC")
+
+        fetch(url)
+            .then((response) => {
+                console.log(response.json());
+            })
+    }
+
     render() {
         return (
             <Root>
