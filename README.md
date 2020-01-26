@@ -4,7 +4,9 @@ Made by Jared Grimes, Max Bartnitski, Joe DiNobile, and Peter Mascheroni
 
 An app that gives you the shortest path between a list of destinations. Cross-platform for iOS and Android, built with React Native.
 
-### To Run
+## To Run
+
+### Adding API Key
 
 To run the application, create the file `api-key.js` in the root of the project file, then add the code:
 
@@ -13,6 +15,18 @@ export const MAPS_API_KEY = "enter-key-here"
 ```
 
 where `enter-key-here` is the API key that I sent you.
+
+### Running the app
+
+Inside the project's root directory, run the commands:
+
+```
+npm install -g expo-cli
+npm install
+npm start
+```
+
+You should be able to either scan QR code or open the app in the simulator of your choice.
 
 ## MVP 1
 
