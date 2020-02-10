@@ -51,7 +51,8 @@ export default class Home extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            returnBackHome: false
+            returnBackHome: false,
+            startAtCurrentLocation: false
         };
     }
 
@@ -88,8 +89,18 @@ export default class Home extends Component {
                             
                             <Form>
                                 <Item floatingLabel>
+                                    <Label style={{color: this.state.startAtCurrentLocation ? "#D3D3D3" : "#404040" }}>Starting Point</Label>
+                                    <Input disabled={this.state.startAtCurrentLocation}/>
+                                </Item>
+
+                                <View style={styles.innerContainer}>
+                                    <CheckBox checked={this.state.startAtCurrentLocation} onPress={() => this.setState({startAtCurrentLocation: !this.state.startAtCurrentLocation})} />
+                                    <Text>Start your route at your current location</Text>
+                                </View>
+
+                                <Item floatingLabel>
                                     <Label>Place 1</Label>
-                                <Input />
+                                    <Input />
                                 </Item>
                                 <Item floatingLabel last>
                                     <Label>Place 2</Label>
@@ -99,23 +110,24 @@ export default class Home extends Component {
                                     <Label>Place 3</Label>
                                     <Input />
                                 </Item>
-                                <Item floatingLabel last>
-                                    <Label>Place 4</Label>
-                                    <Input />
+
+                                <View style={styles.innerContainer}>
+                                    <Button iconLeft transparent>
+                                        <Icon name='add' />
+                                        <Text>Add a place</Text>
+                                    </Button>
+                                </View>
+                                
+                                <Item floatingLabel>
+                                    <Label style={{color: this.state.returnBackHome ? "#D3D3D3" : "#404040" }}>Ending Point</Label>
+                                    <Input disabled={this.state.returnBackHome}/>
                                 </Item>
+
+                                <View style={styles.innerContainer}>
+                                    <CheckBox checked={this.state.returnBackHome} onPress={() => this.setState({returnBackHome: !this.state.returnBackHome})} />
+                                    <Text>End your route at the starting point</Text>
+                                </View>
                             </Form>
-
-                            <View style={styles.innerContainer}>
-                                <Button iconLeft transparent>
-                                    <Icon name='add' />
-                                    <Text>Add a place</Text>
-                                </Button>
-                            </View>
-
-                            <View style={styles.innerContainer}>
-                                <CheckBox checked={this.state.returnBackHome} onPress={() => this.setState({returnBackHome: !this.state.returnBackHome})} />
-                                <Text>Go back home at the end of your route</Text>
-                            </View>
 
                             <View style={styles.innerContainer}>
                                 <Button iconLeft 
