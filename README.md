@@ -11,7 +11,8 @@ An app that gives you the shortest path between a list of destinations. Cross-pl
 To run the application, create the file `api-key.js` in the root of the project file, then add the code:
 
 ```
-export const MAPS_API_KEY = "enter-key-here"
+const MAPS_API_KEY = "enter key here"
+export default MAPS_API_KEY
 ```
 
 where `enter-key-here` is the API key that I sent you.
