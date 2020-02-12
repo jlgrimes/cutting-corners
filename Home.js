@@ -52,18 +52,50 @@ export default class Home extends Component {
         super(props);
         this.state = {
             returnBackHome: false,
-            startAtCurrentLocation: false
+            startAtCurrentLocation: false,
+            startingPoint: "",
+            destinations: ["", "", ""], // initializes three empty places
+            endingPoint: ""
         };
     }
 
-    getDistance() {
-        // Example usage
-        let url = generateAPIUrl(origin="New York City", destination="Washington DC")
+    getAllDistances(destinationPairs) {
+        Promise.all(destinationPairs.map(pair => {
+            let url = generateAPIUrl(pair[0], pair[1])
+            console.log(url)
 
-        fetch(url)
-            .then((response) => {
-                console.log(response.json());
-            })
+            return fetch(url)
+                .then(response => response.json())
+        }))
+        .then(data => console.log(data))
+    }
+
+    onPlaceChange(event, pos) {
+        var destinations = this.state.destinations
+        destinations[pos] = event.nativeEvent.text
+        this.setState({ destinations })
+    }
+
+    addPlace() {
+        var destinations = this.state.destinations
+        destinations.push("")
+        this.setState({ destinations })
+    }
+    
+    onSubmit() {
+        // filter out all of the empty destinations
+        let filteredDestinations = this.state.destinations.filter(destination => destination.length > 0)
+
+        let allDestinations = filteredDestinations
+        allDestinations.unshift(this.state.startingPoint)
+        this.state.returnBackHome ? allDestinations.push(this.state.startingPoint) : allDestinations.push(this.state.endingPoint)
+
+        var destinationPairs = []
+        for (let i = 0; i < allDestinations.length - 1; i++) {
+            destinationPairs.push([allDestinations[i], allDestinations[i + 1]])
+        }
+
+        this.getAllDistances(destinationPairs)
     }
 
     render() {
@@ -90,7 +122,7 @@ export default class Home extends Component {
                             <Form>
                                 <Item floatingLabel>
                                     <Label style={{color: this.state.startAtCurrentLocation ? "#D3D3D3" : "#404040" }}>Starting Point</Label>
-                                    <Input disabled={this.state.startAtCurrentLocation}/>
+                                    <Input disabled={this.state.startAtCurrentLocation} value={this.state.startingPoint} onChange={(event) => this.setState({startingPoint: event.nativeEvent.text})}/>
                                 </Item>
 
                                 <View style={styles.innerContainer}>
@@ -98,21 +130,15 @@ export default class Home extends Component {
                                     <Text>Start your route at your current location</Text>
                                 </View>
 
-                                <Item floatingLabel>
-                                    <Label>Place 1</Label>
-                                    <Input />
-                                </Item>
-                                <Item floatingLabel last>
-                                    <Label>Place 2</Label>
-                                    <Input />
-                                </Item>
-                                <Item floatingLabel last>
-                                    <Label>Place 3</Label>
-                                    <Input />
-                                </Item>
+                                {this.state.destinations.map((destinationName, pos) => 
+                                    <Item floatingLabel>
+                                        <Label>Place {pos + 1}</Label>
+                                        <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
+                                    </Item>
+                                )}
 
                                 <View style={styles.innerContainer}>
-                                    <Button iconLeft transparent>
+                                    <Button iconLeft transparent onPress={() => this.addPlace()}>
                                         <Icon name='add' />
                                         <Text>Add a place</Text>
                                     </Button>
@@ -120,7 +146,7 @@ export default class Home extends Component {
                                 
                                 <Item floatingLabel>
                                     <Label style={{color: this.state.returnBackHome ? "#D3D3D3" : "#404040" }}>Ending Point</Label>
-                                    <Input disabled={this.state.returnBackHome}/>
+                                    <Input disabled={this.state.returnBackHome} value={this.state.endingPoint} onChange={(event) => this.setState({endingPoint: event.nativeEvent.text})}/>
                                 </Item>
 
                                 <View style={styles.innerContainer}>
@@ -128,6 +154,14 @@ export default class Home extends Component {
                                     <Text>End your route at the starting point</Text>
                                 </View>
                             </Form>
+
+                            <View style={styles.innerContainer}>
+                                <Button iconLeft 
+                                    onPress={() => this.onSubmit()}>
+                                    <Icon name='search' />
+                                    <Text>Find Shortest Path</Text>
+                                </Button>
+                            </View>
 
                             <View style={styles.innerContainer}>
                                 <Button iconLeft 
@@ -143,7 +177,7 @@ export default class Home extends Component {
                                         }
                                     )}>
                                     <Icon name='search' />
-                                    <Text>Find Shortest Path</Text>
+                                    <Text>show the model</Text>
                                 </Button>
                             </View>
                         </Content>
