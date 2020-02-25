@@ -4,7 +4,7 @@ import { Container, Header, Left, Body, Right, Title, Content,
     CheckBox, 
     Row} from 'native-base';
 import { View, StyleSheet } from 'react-native'
-import { generateAPIUrl } from './const';
+import { generateAPIUrl, permutator } from './const';
 
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
 var CANCEL_INDEX = 3;
@@ -55,19 +55,78 @@ export default class Home extends Component {
             startAtCurrentLocation: false,
             startingPoint: "",
             destinations: ["", "", ""], // initializes three empty places
-            endingPoint: ""
+            endingPoint: "",
+            allDestinations: ["", "", "", "", ""] // used for distance matrix calc
         };
     }
 
-    getAllDistances(destinationPairs) {
-        Promise.all(destinationPairs.map(pair => {
-            let url = generateAPIUrl(pair[0], pair[1])
-            console.log(url)
+    getDurationFromPath(distanceMatrix, path) {
+        var duration = 0
+        const { allDestinations } = this.state
 
-            return fetch(url)
-                .then(response => response.json())
-        }))
-        .then(data => console.log(data))
+        // iterating through all the sequential pairs
+        for (let i = 0; i < path.length - 1; i++) {
+            let firstPoint = allDestinations.indexOf(path[i])
+            let secondPoint = allDestinations.indexOf(path[i + 1])
+
+            let thisDuration = distanceMatrix[firstPoint]["elements"][secondPoint]["duration"]["value"]
+            console.log(path[i] + "==>" + path[i + 1])
+            console.log(thisDuration)
+
+            duration += thisDuration
+        }
+        return duration
+    }
+
+    bruteForceShortestPath(distanceMatrix) {
+        console.log(distanceMatrix)
+        const { allDestinations } = this.state
+
+        let startingDestination = allDestinations[0]
+        let endingDestination = allDestinations[allDestinations.length - 1]
+        let destinations = allDestinations.slice(1, allDestinations.length - 1)
+        let permutations = permutator(destinations)
+
+        let minDuration = Number.MAX_SAFE_INTEGER
+        let minPath = []
+
+        permutations.forEach(perm => {
+            var path = perm
+            path.unshift(startingDestination)
+            path.push(endingDestination)
+
+            let pathDuration = this.getDurationFromPath(distanceMatrix, path)
+            console.log(path.join(" ==> ") + " total distance: " + pathDuration)
+
+            if (pathDuration < minDuration) {
+                minDuration = pathDuration
+                minPath = path
+            }
+        })
+
+        console.log("TOTAL SHORTEST PATH")
+        console.log(minPath.join(" ==> "))
+        console.log(minDuration)
+    }
+
+    getAllDistances() {
+        let url = generateAPIUrl(this.state.allDestinations)
+        // console.log(url)
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                let allDestinations = data["destination_addresses"]
+                this.setState({ allDestinations })
+                // here we update the allDestinations in the state
+                // this replaces the generic names we type in with the specific addresses
+                // for example, Washington gets replaced with Washington, USA
+                // if we don't want the user interface to change, we can replace this with
+                // a different variable no problem
+
+                let distanceMatrix = data["rows"]
+                this.bruteForceShortestPath(distanceMatrix)
+            })
     }
 
     onPlaceChange(event, pos) {
@@ -89,13 +148,7 @@ export default class Home extends Component {
         let allDestinations = filteredDestinations
         allDestinations.unshift(this.state.startingPoint)
         this.state.returnBackHome ? allDestinations.push(this.state.startingPoint) : allDestinations.push(this.state.endingPoint)
-
-        var destinationPairs = []
-        for (let i = 0; i < allDestinations.length - 1; i++) {
-            destinationPairs.push([allDestinations[i], allDestinations[i + 1]])
-        }
-
-        this.getAllDistances(destinationPairs)
+        this.setState({ allDestinations }, () => this.getAllDistances()) // for distance matrix stuff
     }
 
     render() {
