@@ -4,7 +4,8 @@ import { Container, Header, Left, Body, Right, Title, Content,
     CheckBox, 
     Row} from 'native-base';
 import { View, StyleSheet } from 'react-native'
-import { generateAPIUrl, permutator } from './const';
+import { generateAPIUrl, permutator, generatePathUrl } from './const';
+import { Linking } from 'expo';
 
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
 var CANCEL_INDEX = 3;
@@ -107,6 +108,27 @@ export default class Home extends Component {
         console.log("TOTAL SHORTEST PATH")
         console.log(minPath.join(" ==> "))
         console.log(minDuration)
+
+        let origin = minPath[0]
+        let waypoints = minPath.slice(1, minPath.length - 1)
+        let destination = minPath[minPath.length - 1]
+
+        let pathUrl = generatePathUrl(origin, waypoints, destination)
+
+        ActionSheet.show(
+            {
+                options: BUTTONS,
+                cancelButtonIndex: CANCEL_INDEX,
+                title: "Shortest path generated! Choose an app to open in"
+            },
+            buttonIndex => {
+                console.log(pathUrl)
+                if (BUTTONS[buttonIndex] == "Google Maps") {
+                    Linking.openURL(pathUrl).catch((err) => console.error('An error occurred', err));
+                }
+                this.setState({ clicked: BUTTONS[buttonIndex] });
+            }
+        )
     }
 
     getAllDistances() {
@@ -213,24 +235,6 @@ export default class Home extends Component {
                                     onPress={() => this.onSubmit()}>
                                     <Icon name='search' />
                                     <Text>Find Shortest Path</Text>
-                                </Button>
-                            </View>
-
-                            <View style={styles.innerContainer}>
-                                <Button iconLeft 
-                                    onPress={() =>
-                                        ActionSheet.show(
-                                        {
-                                            options: BUTTONS,
-                                            cancelButtonIndex: CANCEL_INDEX,
-                                            title: "Shortest path generated! Choose an app to open in"
-                                        },
-                                        buttonIndex => {
-                                            this.setState({ clicked: BUTTONS[buttonIndex] });
-                                        }
-                                    )}>
-                                    <Icon name='search' />
-                                    <Text>show the model</Text>
                                 </Button>
                             </View>
                         </Content>
