@@ -6,6 +6,7 @@ import { Container, Header, Left, Body, Right, Title, Content,
 import { View, StyleSheet } from 'react-native'
 import { generateAPIUrl, permutator, generatePathUrl } from './const';
 import { Linking } from 'expo';
+import DraggableFlatList from "react-native-draggable-flatlist";
 
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
 var CANCEL_INDEX = 3;
@@ -168,8 +169,9 @@ export default class Home extends Component {
         let filteredDestinations = this.state.destinations.filter(destination => destination.length > 0)
 
         let allDestinations = filteredDestinations
-        allDestinations.unshift(this.state.startingPoint)
-        this.state.returnBackHome ? allDestinations.push(this.state.startingPoint) : allDestinations.push(this.state.endingPoint)
+        //allDestinations.unshift(this.state.startingPoint)
+        //this.state.returnBackHome ? allDestinations.push(this.state.startingPoint) : allDestinations.push(this.state.endingPoint)
+        this.state.returnBackHome ? allDestinations.push(allDestinations[0]) : null
         this.setState({ allDestinations }, () => this.getAllDistances()) // for distance matrix stuff
     }
 
@@ -195,11 +197,6 @@ export default class Home extends Component {
                             </View>
                             
                             <Form>
-                                <Item floatingLabel>
-                                    <Label style={{color: this.state.startAtCurrentLocation ? "#D3D3D3" : "#404040" }}>Starting Point</Label>
-                                    <Input disabled={this.state.startAtCurrentLocation} value={this.state.startingPoint} onChange={(event) => this.setState({startingPoint: event.nativeEvent.text})}/>
-                                </Item>
-
                                 <View style={styles.innerContainer}>
                                     <CheckBox checked={this.state.startAtCurrentLocation} onPress={() => this.setState({startAtCurrentLocation: !this.state.startAtCurrentLocation})} />
                                     <Text>Start your route at your current location</Text>
@@ -218,11 +215,6 @@ export default class Home extends Component {
                                         <Text>Add a place</Text>
                                     </Button>
                                 </View>
-                                
-                                <Item floatingLabel>
-                                    <Label style={{color: this.state.returnBackHome ? "#D3D3D3" : "#404040" }}>Ending Point</Label>
-                                    <Input disabled={this.state.returnBackHome} value={this.state.endingPoint} onChange={(event) => this.setState({endingPoint: event.nativeEvent.text})}/>
-                                </Item>
 
                                 <View style={styles.innerContainer}>
                                     <CheckBox checked={this.state.returnBackHome} onPress={() => this.setState({returnBackHome: !this.state.returnBackHome})} />
