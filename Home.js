@@ -1,12 +1,13 @@
 import React, { Component } from 'react';
 import { Container, Header, Left, Body, Right, Title, Content, 
     Text, Form, Item, Label, Input, Button, Icon, Grid, Col, Root, ActionSheet,
-    CheckBox, 
+    CheckBox,
     Row} from 'native-base';
-import { View, StyleSheet } from 'react-native'
-import { generateAPIUrl, permutator, generatePathUrl } from './const';
+import { View, StyleSheet, ListItem } from 'react-native'
+import { generateAPIUrl, permutator, generatePathUrl, generatePlaceAutocompleteUrl } from './const';
 import { Linking } from 'expo';
 import DraggableFlatList from "react-native-draggable-flatlist";
+import { Autocomplete } from 'native-base-autocomplete'
 
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
 var CANCEL_INDEX = 3;
@@ -55,10 +56,9 @@ export default class Home extends Component {
         this.state = {
             returnBackHome: false,
             startAtCurrentLocation: false,
-            startingPoint: "",
             destinations: ["", "", ""], // initializes three empty places
-            endingPoint: "",
-            allDestinations: ["", "", "", "", ""] // used for distance matrix calc
+            allDestinations: ["", "", "", "", ""], // used for distance matrix calc
+            autocomplete: []
         };
     }
 
@@ -152,9 +152,30 @@ export default class Home extends Component {
             })
     }
 
+    autocompleteText(text) {
+        let query = text
+        let url = generatePlaceAutocompleteUrl(query)
+        // console.log(url)
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                let autocomplete = data["predictions"]
+                this.setState({ autocomplete })
+            })
+    }
+
     onPlaceChange(event, pos) {
         var destinations = this.state.destinations
+        //destination[pos] = text
         destinations[pos] = event.nativeEvent.text
+        this.setState({ destinations })
+    }
+
+    onPlaceChangeText(text, pos) {
+        var destinations = this.state.destinations
+        destination[pos] = text
+        //destinations[pos] = event.nativeEvent.text
         this.setState({ destinations })
     }
 
@@ -203,10 +224,29 @@ export default class Home extends Component {
                                 </View>
 
                                 {this.state.destinations.map((destinationName, pos) => 
+                                /*
+                                <Autocomplete
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    data={this.state.autocomplete}
+                                    defaultValue={destinationName}
+                                    onChangeText={text => this.onPlaceChangeText(text, pos)}
+                                    placeholder="Enter place"
+                                    renderItem={sugg => <Item
+                                        onPress={() => (
+                                            this.onPlaceChangeText(sugg, pos)
+                                        )}
+                                        >
+                                        <Text>{sugg}</Text>
+                                    </Item>}
+                                />
+                                */
+                              
                                     <Item floatingLabel>
                                         <Label>Place {pos + 1}</Label>
                                         <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                     </Item>
+                                    
                                 )}
 
                                 <View style={styles.innerContainer}>
