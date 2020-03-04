@@ -139,8 +139,8 @@ export default class Home extends Component {
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                let allDestinations = data["destination_addresses"]
-                this.setState({ allDestinations })
+                //let allDestinations = data["destination_addresses"]
+                //this.setState({ allDestinations })
                 // here we update the allDestinations in the state
                 // this replaces the generic names we type in with the specific addresses
                 // for example, Washington gets replaced with Washington, USA
