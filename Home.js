@@ -184,6 +184,13 @@ export default class Home extends Component {
         destinations.push("")
         this.setState({ destinations })
     }
+
+    // deletes either empty space or one with name
+    deletePlace() {
+        var destinations = this.state.destinations
+        destinations.pop()
+        this.setState({ destinations })
+    }
     
     onSubmit() {
         // filter out all of the empty destinations
@@ -246,13 +253,17 @@ export default class Home extends Component {
                                         <Label>Place {pos + 1}</Label>
                                         <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                     </Item>
-                                    
                                 )}
 
                                 <View style={styles.innerContainer}>
                                     <Button iconLeft transparent onPress={() => this.addPlace()}>
                                         <Icon name='add' />
                                         <Text>Add a place</Text>
+                                    </Button>
+
+                                    <Button iconLeft transparent onPress={() => this.deletePlace()}>
+                                        <Icon type='AntDesign' name='delete'/>
+                                        <Text>Delete</Text>
                                     </Button>
                                 </View>
 
