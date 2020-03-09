@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
 import { Container, Header, Left, Body, Right, Title, Content, 
     Text, Form, Item, Label, Input, Button, Icon, Grid, Col, Root, ActionSheet,
-    CheckBox,
+    CheckBox, Toast,
     Row} from 'native-base';
 import { View, StyleSheet, ListItem } from 'react-native'
-import { generateAPIUrl, permutator, generatePathUrl, generatePlaceAutocompleteUrl } from './const';
+import { generateAPIUrl, permutator, generatePathUrl, generatePlaceAutocompleteUrl, 
+    PLACE_TEXT, STARTING_PLACE_TEXT, ENDING_PLACE_TEXT } from './const';
 import { Linking } from 'expo';
 import DraggableFlatList from "react-native-draggable-flatlist";
 import { Autocomplete } from 'native-base-autocomplete'
@@ -50,13 +51,20 @@ const styles = StyleSheet.create({
     }
 })
 
+const showToast = (description, button) => {
+    Toast.show({
+        text: description,
+        buttonText: button
+      })
+}
+
 export default class Home extends Component {
     constructor(props) {
         super(props);
         this.state = {
             returnBackHome: false,
             startAtCurrentLocation: false,
-            destinations: ["", "", ""], // initializes three empty places
+            destinations: ["", "", "", "", ""], // initializes three empty places
             allDestinations: ["", "", "", "", ""], // used for distance matrix calc
             autocomplete: []
         };
@@ -181,13 +189,22 @@ export default class Home extends Component {
 
     addPlace() {
         var destinations = this.state.destinations
+        let endDest = destinations[destinations.length - 1]
+        destinations.pop()
         destinations.push("")
+        destinations.push(endDest)
         this.setState({ destinations })
     }
 
     // deletes either empty space or one with name
     deletePlace(pos) {
         var destinations = this.state.destinations
+
+        if (destinations.length <= 2) {
+            showToast("You can't have less than 2 locations!", "Okay")
+            return
+        }
+
         destinations.splice(pos, 1)
         this.setState({ destinations })
     }
@@ -218,11 +235,13 @@ export default class Home extends Component {
                                 </Text>
                             </View>
 
+                            {/*
                             <View style={styles.innerContainer}>
                                  <Text style={styles.header}>
                                     Enter places
                                 </Text>
                             </View>
+                            */}
                             
                             <Form>
                                 <View style={styles.innerContainer}>
@@ -252,7 +271,7 @@ export default class Home extends Component {
                                     <Grid>
                                         <Col>
                                             <Item floatingLabel>
-                                                <Label>Place {pos + 1}</Label>
+                                                <Label>{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
                                                 <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                             </Item>
                                         </Col>
