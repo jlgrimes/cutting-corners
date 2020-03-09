@@ -186,9 +186,9 @@ export default class Home extends Component {
     }
 
     // deletes either empty space or one with name
-    deletePlace() {
+    deletePlace(pos) {
         var destinations = this.state.destinations
-        destinations.pop()
+        destinations.splice(pos, 1)
         this.setState({ destinations })
     }
     
@@ -249,21 +249,26 @@ export default class Home extends Component {
                                 />
                                 */
                               
-                                    <Item floatingLabel>
-                                        <Label>Place {pos + 1}</Label>
-                                        <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
-                                    </Item>
+                                    <Grid>
+                                        <Col>
+                                            <Item floatingLabel>
+                                                <Label>Place {pos + 1}</Label>
+                                                <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
+                                            </Item>
+                                        </Col>
+                                        <Col style={{width: "15%", top: 25}}>
+                                            <Button iconLeft transparent onPress={() => this.deletePlace(pos)}>
+                                                <Icon type='AntDesign' name='delete'/>
+                                            </Button>
+                                        </Col>
+                                    </Grid>
+
                                 )}
 
                                 <View style={styles.innerContainer}>
                                     <Button iconLeft transparent onPress={() => this.addPlace()}>
                                         <Icon name='add' />
                                         <Text>Add a place</Text>
-                                    </Button>
-
-                                    <Button iconLeft transparent onPress={() => this.deletePlace()}>
-                                        <Icon type='AntDesign' name='delete'/>
-                                        <Text>Delete</Text>
                                     </Button>
                                 </View>
 
