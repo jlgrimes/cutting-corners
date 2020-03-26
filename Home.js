@@ -88,6 +88,66 @@ export default class Home extends Component {
         return duration
     }
 
+    toggleCurrentLocation() {
+        var self = this;
+        self.setState({startAtCurrentLocation: !this.state.startAtCurrentLocation})
+
+        destinations = self.state.destinations
+
+        console.log(self.state.startAtCurrentLocation);
+
+        if (self.state.startAtCurrentLocation) {
+            destinations[0] = "";
+            self.setState({ destinations });
+            console.log(self.state.destinations);
+        } else {
+
+            var options = {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            };
+
+            function success(pos) {
+                var crd = pos.coords;
+
+                console.log('Your current position is:');
+                console.log(`Latitude : ${crd.latitude}`);
+                console.log(`Longitude : ${crd.longitude}`);
+                console.log(`More or less : ${crd.accuracy} meters.`);
+
+                // Must be no space between latitude and longitude points
+                var crdstring = `${crd.latitude},${crd.longitude}`;
+                console.log("crdstring:")
+                console.log(crdstring)
+                console.log(crdstring.constructor);
+                var randompos = destinations[1];
+                console.log(randompos.constructor);
+                if (self.state.startAtCurrentLocation) {
+                    destinations[0] = crdstring;
+                }
+                // destinations[0] = crdstring;
+                self.setState({ destinations });
+            }
+
+            function error(err) {
+                console.warn(`ERROR(${err.code}): ${err.message}`);
+            }
+
+            navigator.geolocation.getCurrentPosition(success, error, options);
+        }
+        self.setState({ destinations });
+    }
+
+    startingStyle() {
+        var self = this;
+        if (self.state.startAtCurrentLocation) {
+            return {
+                backgroundColor: 'gray'
+            }
+        }
+    }
+
     bruteForceShortestPath(distanceMatrix) {
         console.log(distanceMatrix)
         const { allDestinations } = this.state
@@ -142,7 +202,7 @@ export default class Home extends Component {
 
     getAllDistances() {
         let url = generateAPIUrl(this.state.allDestinations)
-        // console.log(url)
+        console.log(url)
 
         fetch(url)
             .then(response => response.json())
@@ -198,11 +258,23 @@ export default class Home extends Component {
 
     // deletes either empty space or one with name
     deletePlace(pos) {
+        var self = this;
         var destinations = this.state.destinations
 
         if (destinations.length <= 2) {
             showToast("You can't have less than 2 locations!", "Okay")
             return
+        }
+
+        // if pos == 0
+        if (pos == 0) {
+
+            // check if app is set to start at current location
+            if (self.state.startAtCurrentLocation) {
+
+                // this should, by default, uncheck the checkbox
+                self.setState({ startAtCurrentLocation: !self.state.startAtCurrentLocation});
+            }
         }
 
         destinations.splice(pos, 1)
@@ -245,7 +317,7 @@ export default class Home extends Component {
                             
                             <Form>
                                 <View style={styles.innerContainer}>
-                                    <CheckBox checked={this.state.startAtCurrentLocation} onPress={() => this.setState({startAtCurrentLocation: !this.state.startAtCurrentLocation})} />
+                                    <CheckBox checked={this.state.startAtCurrentLocation} onPress={() => this.toggleCurrentLocation()} />
                                     <Text>Start your route at your current location</Text>
                                 </View>
 
@@ -271,7 +343,7 @@ export default class Home extends Component {
                                     <Grid>
                                         <Col>
                                             <Item floatingLabel>
-                                                <Label>{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
+                                                <Label style={{ backgroundColor: this.startingStyle(), disabled: this.state.startAtCurrentLocation /* TODO: change stuff here */ }}>{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
                                                 <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                             </Item>
                                         </Col>
