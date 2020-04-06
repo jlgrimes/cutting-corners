@@ -1,3 +1,4 @@
+import MAPS_API_KEY from './api-key'
 import React, { Component } from 'react';
 import { Container, Header, Left, Body, Right, Title, Content, 
     Text, Form, Item, Label, Input, Button, Icon, Grid, Col, Root, ActionSheet,
@@ -8,7 +9,11 @@ import { generateAPIUrl, permutator, generatePathUrl, generatePlaceAutocompleteU
     PLACE_TEXT, STARTING_PLACE_TEXT, ENDING_PLACE_TEXT } from './const';
 import { Linking } from 'expo';
 import DraggableFlatList from "react-native-draggable-flatlist";
-import { Autocomplete } from 'native-base-autocomplete'
+import { Autocomplete } from 'native-base-autocomplete';
+import Geocode from "react-geocode";
+import { add } from 'react-native-reanimated';
+import { withOrientation } from 'react-navigation';
+Geocode.setApiKey(MAPS_API_KEY);
 
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
 var CANCEL_INDEX = 3;
@@ -68,6 +73,14 @@ export default class Home extends Component {
             allDestinations: ["", "", "", "", ""], // used for distance matrix calc
             autocomplete: []
         };
+        this.addPlace = this.addPlace.bind(this);
+        this.onSubmit = this.onSubmit.bind(this);
+        this.endEqualsStart = this.endEqualsStart.bind(this);
+        this.endRouteStyling = this.endRouteStyling.bind(this);
+    }
+
+    componentDidMount() {
+        this.setCurrentLocation();
     }
 
     getDurationFromPath(distanceMatrix, path) {
@@ -88,64 +101,41 @@ export default class Home extends Component {
         return duration
     }
 
-    toggleCurrentLocation() {
-        var self = this;
-        self.setState({startAtCurrentLocation: !this.state.startAtCurrentLocation})
+    setCurrentLocation() {
+        let destinations = this.state.destinations.slice();
 
-        destinations = self.state.destinations
-
-        console.log(self.state.startAtCurrentLocation);
-
-        if (self.state.startAtCurrentLocation) {
-            destinations[0] = "";
-            self.setState({ destinations });
-            console.log(self.state.destinations);
-        } else {
-
+        var getPosition = function () {
             var options = {
                 enableHighAccuracy: true,
-                timeout: 5000,
+                timeout: 10000,
                 maximumAge: 0
             };
 
-            function success(pos) {
-                var crd = pos.coords;
-
-                console.log('Your current position is:');
-                console.log(`Latitude : ${crd.latitude}`);
-                console.log(`Longitude : ${crd.longitude}`);
-                console.log(`More or less : ${crd.accuracy} meters.`);
-
-                // Must be no space between latitude and longitude points
-                var crdstring = `${crd.latitude},${crd.longitude}`;
-                console.log("crdstring:")
-                console.log(crdstring)
-                console.log(crdstring.constructor);
-                var randompos = destinations[1];
-                console.log(randompos.constructor);
-                if (self.state.startAtCurrentLocation) {
-                    destinations[0] = crdstring;
-                }
-                // destinations[0] = crdstring;
-                self.setState({ destinations });
-            }
-
-            function error(err) {
-                console.warn(`ERROR(${err.code}): ${err.message}`);
-            }
-
-            navigator.geolocation.getCurrentPosition(success, error, options);
-        }
-        self.setState({ destinations });
-    }
-
-    startingStyle() {
-        var self = this;
-        if (self.state.startAtCurrentLocation) {
-            return {
-                backgroundColor: 'gray'
-            }
-        }
+            return new Promise(function (resolve, reject) {
+              navigator.geolocation.getCurrentPosition(resolve, reject, options);
+            });
+          }
+          
+        getPosition()
+            .then((pos) => {
+                console.log(pos);
+                Geocode.fromLatLng(pos.coords.latitude, pos.coords.longitude).then(
+                    response => {
+                        let street = response.results[0].address_components[0].short_name + " " + response.results[0].address_components[1].short_name;
+                        let city = response.results[0].address_components[3].short_name;
+                        let address = street + " " + city;
+                        destinations[0] = address;
+                        this.setState({ destinations });
+                        console.log("Current location retrieved successfully and set\nAddress: " + address);
+                    },
+                    error => {
+                        console.log(error);
+                    }
+                );
+            })
+            .catch((err) => {
+                console.log(err.message);
+        });
     }
 
     bruteForceShortestPath(distanceMatrix) {
@@ -234,10 +224,16 @@ export default class Home extends Component {
     }
 
     onPlaceChange(event, pos) {
-        var destinations = this.state.destinations
+        let destinations = this.state.destinations
         //destination[pos] = text
         destinations[pos] = event.nativeEvent.text
+
+        if (this.state.returnBackHome) {
+            destinations[destinations.length - 1] = destinations[0];
+        }
+
         this.setState({ destinations })
+        console.log(destinations)
     }
 
     onPlaceChangeText(text, pos) {
@@ -291,6 +287,33 @@ export default class Home extends Component {
         this.state.returnBackHome ? allDestinations.push(allDestinations[0]) : null
         this.setState({ allDestinations }, () => this.getAllDistances()) // for distance matrix stuff
     }
+    
+    // populates final destination with starting destination at index 0 
+    endEqualsStart() {    
+        let destinations = this.state.destinations.slice();
+       
+        this.setState(prevState => ({returnBackHome: !prevState.returnBackHome}), () => {
+            if (this.state.returnBackHome) {
+                destinations[destinations.length - 1] = destinations[0];
+            } else {
+                destinations[destinations.length - 1] = "";
+            }
+            this.setState({ destinations }); 
+        });
+    }
+
+    endRouteStyling(pos) {
+        if (pos === this.state.destinations.length - 1 && this.state.returnBackHome) {
+            return {
+                backgroundColor:'grey',
+                disabled: 'true',
+                opacity: .5
+            }
+        } else {
+            return "";
+        }
+        
+    }
 
     render() {
         return (
@@ -306,21 +329,12 @@ export default class Home extends Component {
                                     Find the quickest path between all your daily stops
                                 </Text>
                             </View>
-
-                            {/*
-                            <View style={styles.innerContainer}>
-                                 <Text style={styles.header}>
-                                    Enter places
-                                </Text>
-                            </View>
-                            */}
-                            
                             <Form>
                                 <View style={styles.innerContainer}>
-                                    <CheckBox checked={this.state.startAtCurrentLocation} onPress={() => this.toggleCurrentLocation()} />
-                                    <Text>Start your route at your current location</Text>
+                                    <CheckBox checked={this.state.returnBackHome} onPress={this.endEqualsStart} />
+                                    <Text>End your route at the starting point</Text>
                                 </View>
-
+                        
                                 {this.state.destinations.map((destinationName, pos) => 
                                 /*
                                 <Autocomplete
@@ -339,12 +353,11 @@ export default class Home extends Component {
                                     </Item>}
                                 />
                                 */
-                              
                                     <Grid>
                                         <Col>
                                             <Item floatingLabel>
-                                                <Label style={{ backgroundColor: this.startingStyle(), disabled: this.state.startAtCurrentLocation /* TODO: change stuff here */ }}>{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
-                                                <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
+                                                <Label class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
+                                                <Input {...this.endRouteStyling(pos)} value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                             </Item>
                                         </Col>
                                         <Col style={{width: "15%", top: 25}}>
@@ -353,25 +366,17 @@ export default class Home extends Component {
                                             </Button>
                                         </Col>
                                     </Grid>
-
                                 )}
-
                                 <View style={styles.innerContainer}>
-                                    <Button iconLeft transparent onPress={() => this.addPlace()}>
+                                    <Button iconLeft transparent onPress={this.addPlace}> 
                                         <Icon name='add' />
                                         <Text>Add a place</Text>
                                     </Button>
                                 </View>
-
-                                <View style={styles.innerContainer}>
-                                    <CheckBox checked={this.state.returnBackHome} onPress={() => this.setState({returnBackHome: !this.state.returnBackHome})} />
-                                    <Text>End your route at the starting point</Text>
-                                </View>
                             </Form>
-
                             <View style={styles.innerContainer}>
                                 <Button iconLeft 
-                                    onPress={() => this.onSubmit()}>
+                                    onPress={this.onSubmit}>
                                     <Icon name='search' />
                                     <Text>Find Shortest Path</Text>
                                 </Button>
