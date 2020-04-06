@@ -228,7 +228,7 @@ export default class Home extends Component {
         //destination[pos] = text
         destinations[pos] = event.nativeEvent.text
 
-        if (this.state.returnBackHome) {
+        if (this.state.returnBackHome && pos === 0) {
             destinations[destinations.length - 1] = destinations[0];
         }
 
