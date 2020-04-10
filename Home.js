@@ -173,6 +173,9 @@ export default class Home extends Component {
         let destination = minPath[minPath.length - 1]
 
         let pathUrl = generatePathUrl(origin, waypoints, destination)
+        console.log(pathUrl)
+
+        let applePathUrl = "http://maps.apple.com/?daddr=" + waypoints[0].split(" ").join("+")
 
         ActionSheet.show(
             {
@@ -184,6 +187,9 @@ export default class Home extends Component {
                 console.log(pathUrl)
                 if (BUTTONS[buttonIndex] == "Google Maps") {
                     Linking.openURL(pathUrl).catch((err) => console.error('An error occurred', err));
+                } else if (BUTTONS[buttonIndex] == "Apple Maps") {
+                    console.log(applePathUrl)
+                    Linking.openURL(applePathUrl).catch((err) => console.error('An error occurred', err));
                 }
                 this.setState({ clicked: BUTTONS[buttonIndex] });
             }
@@ -284,7 +290,7 @@ export default class Home extends Component {
         let allDestinations = filteredDestinations
         //allDestinations.unshift(this.state.startingPoint)
         //this.state.returnBackHome ? allDestinations.push(this.state.startingPoint) : allDestinations.push(this.state.endingPoint)
-        this.state.returnBackHome ? allDestinations.push(allDestinations[0]) : null
+        //this.state.returnBackHome ? allDestinations.push(allDestinations[0]) : null   *** DON'T NEED THIS LINE HERE IF WE HAVE endEqualsStart()
         this.setState({ allDestinations }, () => this.getAllDistances()) // for distance matrix stuff
     }
     
