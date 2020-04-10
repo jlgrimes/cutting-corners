@@ -41,12 +41,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         height: 100,
         padding: 20,
-        justifyContent: "space-between"
+        justifyContent: "space-between",
     },
     innerContainer: {
         flexDirection: 'row',
         paddingTop: 20,
-        justifyContent: "space-evenly"
+        paddingBottom: 20,
+        justifyContent: "space-evenly",
     },
     title: {
         fontSize: 44,
@@ -71,6 +72,14 @@ const styles = StyleSheet.create({
     titleBlock: {
         paddingTop: 50,
         paddingBottom: 30,
+    },
+    input: {
+        borderColor: "lightgrey",
+        borderRadius: 20,
+        borderStyle: "solid",
+        borderWidth: 1,
+        margin: 10,
+        paddingBottom: 10,
     }
 })
 
@@ -480,19 +489,13 @@ export default class Home extends Component {
         if (pos === 0) {
             return
         }
-        
-        if (this.state.lockedPlaces[pos] === true) {
-            this.state.lockedPlaces[pos] = false
-            console.log('Set to false')
-        }
-        else if (this.state.lockedPlaces[pos] === false) {
-            this.state.lockedPlaces[pos] = true
-            console.log('Set to true')
-        }
+        let lockedPlaces = this.state.lockedPlaces;
+        lockedPlaces[pos] = !lockedPlaces[pos];
+        this.setState({ lockedPlaces });
     }
 
     lockPlaceStyling(pos) {
-        if (pos < this.state.destinations.length - 1 && pos > 0 &&  this.state.lockedPlaces[pos] === true) {
+        if (this.state.lockedPlaces[pos] === true && pos < this.state.destinations.length - 1 && pos > 0 ) {
             return {
                 backgroundColor:'grey',
                 disabled: 'true',
@@ -561,7 +564,7 @@ export default class Home extends Component {
                                     Find the quickest path between all your daily stops
                                 </Text>
                             </View>
-                            <Form>
+                            <Form >
                                 <View style={styles.innerContainer}>
                                     <CheckBox checked={this.state.returnBackHome} onPress={this.endEqualsStart} />
                                     <Text>End your route at the starting point</Text>
@@ -574,7 +577,7 @@ export default class Home extends Component {
                                     <Grid>
                                         <Col>
                                             <Item floatingLabel>
-                                                <Label class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
+                                                <Label style={{padding: 20,}} class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
                                                 <Input {...this.lockPlaceStyling(pos)} value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                             </Item>
                                         </Col>
@@ -590,7 +593,7 @@ export default class Home extends Component {
                                         </Col>
                                     </Grid>
                                 )}
-                                <View style={styles.innerContainer}>
+                                <View style={styles.innerContainer} >
                                     <Button iconLeft onPress={this.addPlace}> 
                                         <Icon name='add' />
                                         <Text>Add a stop</Text>
@@ -600,10 +603,10 @@ export default class Home extends Component {
                             </Form>
 
                             <Form>
-                                <Grid>
+                                <Grid style={styles.input}> 
                                         <Col>
                                             <Item floatingLabel>
-                                                <Label class="active">{ENDING_PLACE_TEXT}</Label>
+                                                <Label style={{padding: 20,}} class="active">{ENDING_PLACE_TEXT}</Label>
                                                 <Input {...this.endRouteStyling(this.state.destinations.length - 1)} value={this.state.destinations.slice(-1)[0]} onChange={(event) => this.onPlaceChange(event, this.state.destinations.length - 1)}/>
                                             </Item>
                                         </Col>
@@ -620,7 +623,7 @@ export default class Home extends Component {
                                     </Grid>
                             </Form>
                             <View style={styles.innerContainer}>
-                                <Button iconLeft 
+                                <Button iconLeft  
                                     onPress={this.onSubmit}>
                                     <Icon name='search' />
                                     <Text>Find Shortest Path</Text>
