@@ -12,8 +12,7 @@ export const GENERAL_SEARCH_BASE_URL = "https://maps.googleapis.com/maps/api/pla
 export const generateAPIUrl = (destinations) => MAPS_API_BASE_URL + "&origins=" + destinations.join("|").split(" ").join(",") + "&destinations=" + destinations.join("|").split(" ").join(",") + "&key=" + MAPS_API_KEY;
 export const generatePathUrl = (origin, waypoints, destination) => MAPS_PATH_BASE_URL + "&origin=" + origin + "&waypoints="  + waypoints.join("|") + "&destination=" + destination;
 export const generatePlaceAutocompleteUrl = (text) => PLACE_AUTOCOMPLETE_API_BASE_URL + "input=" + text + "&key=" + MAPS_API_KEY;
-export const generateGeneralSearchURL = (query, CURRENT_COORDS) => GENERAL_SEARCH_BASE_URL + query + "&location=" + CURRENT_COORDS + "&radius=30000&key=" + MAPS_API_KEY;
-
+export const generateGeneralSearchURL = (query, CURRENT_COORDS) => GENERAL_SEARCH_BASE_URL + query + "&location=" + CURRENT_COORDS + "&radius=50000&key=" + MAPS_API_KEY; 
 
 // maintain list of "types" already seen in perm
 export const permutator = (inputArr, numSearch) => {  
