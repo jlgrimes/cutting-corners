@@ -74,7 +74,6 @@ export default class Home extends Component {
         super(props);
         this.state = {
             returnBackHome: false,
-            // startAtCurrentLocation: false,
             destinations: ["", "", "", "", ""], // initializes three empty places
             allDestinations: ["", "", "", "", ""], // used for distance matrix calc
             autocomplete: [],
@@ -231,8 +230,6 @@ export default class Home extends Component {
     }
 
     bruteForceShortestPath(distanceMatrix, numSearch) {
-        console.log("DISTANCE MATRIX22222: " + distanceMatrix);
-        
         let startingDestination = this.state.allDestinations[0];
         let endingDestination = this.state.allDestinations[this.state.allDestinations.length - 1];
         let destinations = this.state.permDestinations.slice(1, this.state.permDestinations.length - 1);        
@@ -371,17 +368,6 @@ export default class Home extends Component {
             showToast("You can't have less than 2 locations!", "Okay")
             return
         }
-
-        // // if pos == 0
-        // if (pos == 0) {
-
-        //     // check if app is set to start at current location
-        //     if (self.state.startAtCurrentLocation) {
-
-        //         // this should, by default, uncheck the checkbox
-        //         self.setState({ startAtCurrentLocation: !self.state.startAtCurrentLocation});
-        //     }
-        // }
 
         destinations.splice(pos, 1)
         this.setState({ destinations })
