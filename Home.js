@@ -480,6 +480,7 @@ export default class Home extends Component {
         if (pos === 0) {
             return
         }
+        
         if (this.state.lockedPlaces[pos] === true) {
             this.state.lockedPlaces[pos] = false
             console.log('Set to false')
