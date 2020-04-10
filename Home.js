@@ -486,6 +486,22 @@ export default class Home extends Component {
                                     <Text>End your route at the starting point</Text>
                                 </View>
                                 {this.state.destinations.slice(0, -1).map((destinationName, pos) => 
+                                /*	<Autocomplete	
+                                    autoCapitalize="none"	
+                                    autoCorrect={false}	
+                                    data={this.state.autocomplete}	
+                                    defaultValue={destinationName}	
+                                    onChangeText={text => this.onPlaceChangeText(text, pos)}	
+                                    placeholder="Enter place"	
+                                    renderItem={sugg => <Item	
+                                        onPress={() => (	
+                                            this.onPlaceChangeText(sugg, pos)	
+                                        )}	
+                                        >	
+                                        <Text>{sugg}</Text>	
+                                    </Item>}	
+                                />	
+                                */
                                     <Grid>
                                         <Col>
                                             <Item floatingLabel>
