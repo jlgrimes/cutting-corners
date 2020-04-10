@@ -574,7 +574,7 @@ export default class Home extends Component {
 
                                 {this.state.destinations.slice(0, -1).map((destinationName, pos) => 
                                 
-                                    <Grid>
+                                    <Grid style={styles.input}>
                                         <Col>
                                             <Item floatingLabel>
                                                 <Label style={{padding: 20,}} class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
