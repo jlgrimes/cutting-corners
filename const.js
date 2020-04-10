@@ -1,6 +1,6 @@
 import MAPS_API_KEY from './api-key'
 
-export const PLACE_TEXT = "Place"
+export const PLACE_TEXT = "Stop"
 export const STARTING_PLACE_TEXT = "Starting Location"
 export const ENDING_PLACE_TEXT = "Ending Location"
 

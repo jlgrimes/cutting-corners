@@ -69,8 +69,8 @@ export default class Home extends Component {
         this.state = {
             returnBackHome: false,
             startAtCurrentLocation: false,
-            destinations: ["", "", "", "", ""], // initializes three empty places
-            allDestinations: ["", "", "", "", ""], // used for distance matrix calc
+            destinations: ["", ""], // initializes three empty places
+            allDestinations: ["", ""], // used for distance matrix calc
             autocomplete: []
         };
         this.addPlace = this.addPlace.bind(this);
@@ -276,6 +276,11 @@ export default class Home extends Component {
         destinations.splice(pos, 1)
         this.setState({ destinations })
     }
+
+    // need to lock location in algo for routing
+    lockPlace(pos) {
+        // need to do
+    }
     
     onSubmit() {
         // filter out all of the empty destinations
@@ -334,31 +339,18 @@ export default class Home extends Component {
                                     <CheckBox checked={this.state.returnBackHome} onPress={this.endEqualsStart} />
                                     <Text>End your route at the starting point</Text>
                                 </View>
-                        
-                                {this.state.destinations.map((destinationName, pos) => 
-                                /*
-                                <Autocomplete
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                    data={this.state.autocomplete}
-                                    defaultValue={destinationName}
-                                    onChangeText={text => this.onPlaceChangeText(text, pos)}
-                                    placeholder="Enter place"
-                                    renderItem={sugg => <Item
-                                        onPress={() => (
-                                            this.onPlaceChangeText(sugg, pos)
-                                        )}
-                                        >
-                                        <Text>{sugg}</Text>
-                                    </Item>}
-                                />
-                                */
+                                {this.state.destinations.slice(0, -1).map((destinationName, pos) => 
                                     <Grid>
                                         <Col>
                                             <Item floatingLabel>
                                                 <Label class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
-                                                <Input {...this.endRouteStyling(pos)} value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
+                                                <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                             </Item>
+                                        </Col>
+                                        <Col style={{width: "15%", top: 25}}>
+                                            <Button iconLeft transparent onPress={() => this.lockPlace(pos)}>
+                                                <Icon type='AntDesign' name='lock'/>
+                                            </Button>
                                         </Col>
                                         <Col style={{width: "15%", top: 25}}>
                                             <Button iconLeft transparent onPress={() => this.deletePlace(pos)}>
@@ -370,10 +362,33 @@ export default class Home extends Component {
                                 <View style={styles.innerContainer}>
                                     <Button iconLeft transparent onPress={this.addPlace}> 
                                         <Icon name='add' />
-                                        <Text>Add a place</Text>
+                                        <Text>Add a stop</Text>
                                     </Button>
                                 </View>
+                               
                             </Form>
+
+                            <Form>
+                                <Grid>
+                                        <Col>
+                                            <Item floatingLabel>
+                                                <Label class="active">{ENDING_PLACE_TEXT}</Label>
+                                                <Input value={this.state.destinations.slice(-1)[0]} onChange={(event) => this.onPlaceChange(event, this.state.destinations.length - 1)}/>
+                                            </Item>
+                                        </Col>
+                                        <Col style={{width: "15%", top: 25}}>
+                                            <Button iconLeft transparent onPress={() => this.lockPlace(this.state.destinations.length)}>
+                                                <Icon type='AntDesign' name='lock'/>
+                                            </Button>
+                                        </Col>
+                                        <Col style={{width: "15%", top: 25}}>
+                                            <Button iconLeft transparent onPress={() => this.deletePlace(this.state.destinations.length)}>
+                                                <Icon type='AntDesign' name='delete'/>
+                                            </Button>
+                                        </Col>
+                                    </Grid>
+                            </Form>
+
                             <View style={styles.innerContainer}>
                                 <Button iconLeft 
                                     onPress={this.onSubmit}>
