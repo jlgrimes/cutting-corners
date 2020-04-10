@@ -6,17 +6,20 @@ import MAPS_API_KEY from './api-key'
 import React, { Component } from 'react';
 import { Container, Header, Left, Body, Right, Title, Content, 
     Text, Form, Item, Label, Input, Button, Icon, Grid, Col, Root, ActionSheet,
-    CheckBox, Toast,
+    CheckBox, Toast, ListItem,
     Row} from 'native-base';
-import { View, StyleSheet, ListItem } from 'react-native'
+import { View, StyleSheet, Animated} from 'react-native'
 import { generateAPIUrl, permutator, generatePathUrl, generatePlaceAutocompleteUrl, 
     PLACE_TEXT, STARTING_PLACE_TEXT, ENDING_PLACE_TEXT, generateGeneralSearchURL } from './const';
 import { Linking } from 'expo';
 import DraggableFlatList from "react-native-draggable-flatlist";
-import { Autocomplete } from 'native-base-autocomplete';
+import Autocomplete from 'native-base-autocomplete';
 import Geocode from "react-geocode";
 import { add } from 'react-native-reanimated';
 import { withOrientation } from 'react-navigation';
+import { Overlay } from 'react-native-elements';
+import * as Progress from 'react-native-progress';
+
 Geocode.setApiKey(MAPS_API_KEY);
 
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
@@ -25,6 +28,14 @@ let CURRENT_ADDRESS = "";
 let CURRENT_COORDS = "42.2745128,-83.7355595";
 
 const styles = StyleSheet.create({
+    autocompleteContainer: {
+        flex: 1,
+        left: 0,
+        position: 'absolute',
+        right: 0,
+        top: 0,
+        zIndex: 1
+      },
     container: {
         flexDirection: 'row',
         height: 100,
@@ -80,7 +91,12 @@ export default class Home extends Component {
             lockedPlaces: [false, false], // needs to be same size as list
             autocomplete: [],
             permDestinations: [], // list of [address, type] pairs to accomodate general queries. type = 0 for specific addres, type = 1+ for general address
-            matrixDestinations: [] // list of all possible destinations including all general search results
+            matrixDestinations: [], // list of all possible destinations including all general search results,
+            autocompleteOverlayVisible: false, // the overlay for autocomplete modal
+            autocompletePos: 0, // the pos of the destination we are editing via autocomplete
+            autocompleteFadeValue: new Animated.Value(0),
+            computing: false,
+            computingProgress: 0
         };
         this.addPlace = this.addPlace.bind(this);
         this.onSubmit = this.onSubmit.bind(this);
@@ -246,6 +262,8 @@ export default class Home extends Component {
         let minDuration = Number.MAX_SAFE_INTEGER;
         let minPath = [];
 
+        const progressIncr = 1 / permutations.length;
+
         permutations.forEach(perm => {
             var path = perm
             path.unshift(startingDestination)
@@ -258,6 +276,8 @@ export default class Home extends Component {
                 minDuration = pathDuration
                 minPath = path
             }
+
+            this.setState({computingProgress: this.state.computingProgress += progressIncr})
         })
 
         // console.log("TOTAL SHORTEST PATH")
@@ -333,7 +353,8 @@ export default class Home extends Component {
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                let autocomplete = data["predictions"]
+                let autocomplete = data["predictions"].map(pred => pred.description)
+                console.log(autocomplete)
                 this.setState({ autocomplete })
             })
             .catch((error) => {
@@ -355,10 +376,26 @@ export default class Home extends Component {
     }
 
     onPlaceChangeText(text, pos) {
+        console.log("YUh")
         var destinations = this.state.destinations
-        destination[pos] = text
+        destinations[pos] = text
+        this.autocompleteText(text)
         //destinations[pos] = event.nativeEvent.text
         this.setState({ destinations })
+    }
+
+    onAutocompleteSelect(sugg, pos) {
+        console.log(pos)
+        // we want to wipe autocompelete as well
+        let autocomplete = []
+
+        var destinations = this.state.destinations
+        destinations[pos] = sugg
+        this.setState({ 
+            destinations, 
+            autocomplete,
+            autocompleteOverlayVisible: false   // hide the modal
+        })
     }
 
     addPlace() {
@@ -370,6 +407,11 @@ export default class Home extends Component {
         this.setState({ destinations })
         // add value for lockPlace tracking
         this.state.lockedPlaces.push(false)
+
+        this.setState({
+            autocompleteOverlayVisible: true,
+            autocompletePos: destinations.length - 2
+        })
     }
 
     // deletes either empty space or one with name
@@ -403,12 +445,11 @@ export default class Home extends Component {
     }
 
     
-    onSubmit() {        
+    onSubmit() {
+        this.setState({computing: true}) 
         // filter out all of the empty destinations
         let filteredDestinations = this.state.destinations.filter(destination => destination.length > 0);
         let allDestinations = filteredDestinations;
-
-
 
         this.setState({permDestinations: []}, 
                       () => this.setState({matrixDestinations: []}, 
@@ -472,6 +513,50 @@ export default class Home extends Component {
         }
     }
 
+    _start() {
+        this.setState({autocompleteFadeValue: new Animated.Value(0)}, () => {
+            Animated.timing(this.state.autocompleteFadeValue, {
+                toValue: 1,
+                duration: 1000
+              }).start();
+        })
+      };
+
+    renderAutocomplete() {
+        return (
+            <Overlay 
+                overlayStyle={{opacity: 1}}
+                isVisible={this.state.autocompleteOverlayVisible}
+                onBackdropPress={() => this.setState({ autocompleteOverlayVisible: false })}
+            >
+
+            <ListItem
+                onPress={() => (	
+                    this.onAutocompleteSelect(this.state.destinations[this.state.autocompletePos], this.state.autocompletePos)	
+                )}	
+                >	
+                <Text>Find best location</Text>	
+            </ListItem>	
+
+            <Autocomplete	
+                autoCorrect={false}	
+                data={this.state.autocomplete}	
+                defaultValue={this.state.destinations[this.state.autocompletePos]}	
+                onChangeText={text => this.onPlaceChangeText(text, this.state.autocompletePos)}
+                placeholder="Enter place"	
+                renderItem={sugg => 
+                    <ListItem
+                        onPress={() => (	
+                            this.onAutocompleteSelect(sugg, this.state.autocompletePos)	
+                        )}	
+                        >	
+                        <Text>{sugg}</Text>	
+                    </ListItem>}	
+            />	
+        </Overlay>
+        )
+    }
+
     render() {
         return (
             <Root>
@@ -491,23 +576,11 @@ export default class Home extends Component {
                                     <CheckBox checked={this.state.returnBackHome} onPress={this.endEqualsStart} />
                                     <Text>End your route at the starting point</Text>
                                 </View>
+
+                                {this.renderAutocomplete()}
+
                                 {this.state.destinations.slice(0, -1).map((destinationName, pos) => 
-                                /*	<Autocomplete	
-                                    autoCapitalize="none"	
-                                    autoCorrect={false}	
-                                    data={this.state.autocomplete}	
-                                    defaultValue={destinationName}	
-                                    onChangeText={text => this.onPlaceChangeText(text, pos)}	
-                                    placeholder="Enter place"	
-                                    renderItem={sugg => <Item	
-                                        onPress={() => (	
-                                            this.onPlaceChangeText(sugg, pos)	
-                                        )}	
-                                        >	
-                                        <Text>{sugg}</Text>	
-                                    </Item>}	
-                                />	
-                                */
+                                
                                     <Grid>
                                         <Col>
                                             <Item floatingLabel>
@@ -563,6 +636,13 @@ export default class Home extends Component {
                                     <Text>Find Shortest Path</Text>
                                 </Button>
                             </View>
+                            {this.state.computing ? 
+                                <View style={styles.innerContainer}>
+                                    <Text>Computing...</Text>
+                                    <Progress.Bar progress={this.state.computingProgress} width={200} />
+                                </View>
+                            : null
+                            }
                         </Content>
                     </Container>
                 </View>
