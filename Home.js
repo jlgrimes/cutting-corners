@@ -392,8 +392,6 @@ export default class Home extends Component {
         let filteredDestinations = this.state.destinations.filter(destination => destination.length > 0);
         let allDestinations = filteredDestinations;
 
-
-
         this.setState({permDestinations: []}, 
                       () => this.setState({matrixDestinations: []}, 
                         () => this.setState({ allDestinations }, 
