@@ -1,3 +1,7 @@
+// Ideas:
+//      Notification if all results for search query are closed, line 186
+// #SPEED: places to potentially improve speed
+
 import MAPS_API_KEY from './api-key'
 import React, { Component } from 'react';
 import { Container, Header, Left, Body, Right, Title, Content, 
@@ -6,7 +10,7 @@ import { Container, Header, Left, Body, Right, Title, Content,
     Row} from 'native-base';
 import { View, StyleSheet, ListItem } from 'react-native'
 import { generateAPIUrl, permutator, generatePathUrl, generatePlaceAutocompleteUrl, 
-    PLACE_TEXT, STARTING_PLACE_TEXT, ENDING_PLACE_TEXT } from './const';
+    PLACE_TEXT, STARTING_PLACE_TEXT, ENDING_PLACE_TEXT, generateGeneralSearchURL } from './const';
 import { Linking } from 'expo';
 import DraggableFlatList from "react-native-draggable-flatlist";
 import { Autocomplete } from 'native-base-autocomplete';
@@ -17,6 +21,8 @@ Geocode.setApiKey(MAPS_API_KEY);
 
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
 var CANCEL_INDEX = 3;
+let CURRENT_ADDRESS = "";
+let CURRENT_COORDS = "42.2745128,-83.7355595";
 
 const styles = StyleSheet.create({
     container: {
@@ -68,43 +74,29 @@ export default class Home extends Component {
         super(props);
         this.state = {
             returnBackHome: false,
-            startAtCurrentLocation: false,
-            destinations: ["", "", "", "", ""], // initializes three empty places
-            allDestinations: ["", "", "", "", ""], // used for distance matrix calc
-            autocomplete: []
+            // startAtCurrentLocation: false,
+            destinations: ["", ""], // initializes three empty places
+            allDestinations: ["", ""], // used for distance matrix calc
+            lockedPlaces: [false, false], // needs to be same size as list
+            autocomplete: [],
+            permDestinations: [], // list of [address, type] pairs to accomodate general queries. type = 0 for specific addres, type = 1+ for general address
+            matrixDestinations: [] // list of all possible destinations including all general search results
         };
         this.addPlace = this.addPlace.bind(this);
         this.onSubmit = this.onSubmit.bind(this);
         this.endEqualsStart = this.endEqualsStart.bind(this);
         this.endRouteStyling = this.endRouteStyling.bind(this);
+        this.lockPlaceStyling = this.lockPlaceStyling.bind(this);
     }
 
     componentDidMount() {
         this.setCurrentLocation();
     }
 
-    getDurationFromPath(distanceMatrix, path) {
-        var duration = 0
-        const { allDestinations } = this.state
-
-        // iterating through all the sequential pairs
-        for (let i = 0; i < path.length - 1; i++) {
-            let firstPoint = allDestinations.indexOf(path[i])
-            let secondPoint = allDestinations.indexOf(path[i + 1])
-
-            let thisDuration = distanceMatrix[firstPoint]["elements"][secondPoint]["duration"]["value"]
-            console.log(path[i] + "==>" + path[i + 1])
-            console.log(thisDuration)
-
-            duration += thisDuration
-        }
-        return duration
-    }
-
     setCurrentLocation() {
         let destinations = this.state.destinations.slice();
 
-        var getPosition = function () {
+        let getPosition = function () {
             var options = {
                 enableHighAccuracy: true,
                 timeout: 10000,
@@ -114,16 +106,17 @@ export default class Home extends Component {
             return new Promise(function (resolve, reject) {
               navigator.geolocation.getCurrentPosition(resolve, reject, options);
             });
-          }
+        };
           
         getPosition()
             .then((pos) => {
-                console.log(pos);
+                CURRENT_COORDS = pos.coords.latitude + "," + pos.coords.longitude;
                 Geocode.fromLatLng(pos.coords.latitude, pos.coords.longitude).then(
                     response => {
                         let street = response.results[0].address_components[0].short_name + " " + response.results[0].address_components[1].short_name;
                         let city = response.results[0].address_components[3].short_name;
                         let address = street + " " + city;
+                        CURRENT_ADDRESS = address;
                         destinations[0] = address;
                         this.setState({ destinations });
                         console.log("Current location retrieved successfully and set\nAddress: " + address);
@@ -138,17 +131,120 @@ export default class Home extends Component {
         });
     }
 
-    bruteForceShortestPath(distanceMatrix) {
-        console.log(distanceMatrix)
-        const { allDestinations } = this.state
+    // determines startpoint coordinates, then calls getGeneralLocations
+    async getGeneralLocations() {
+        let start_coords = CURRENT_COORDS;
+        let start = this.state.destinations[0];
 
-        let startingDestination = allDestinations[0]
-        let endingDestination = allDestinations[allDestinations.length - 1]
-        let destinations = allDestinations.slice(1, allDestinations.length - 1)
-        let permutations = permutator(destinations)
+        // if user changed start from current location
+        // set start_coords to coordinates of the specified start address
+        if (start != CURRENT_ADDRESS) {
+            let result = await Geocode.fromAddress(start);
+            let lat = result["results"][0]["geometry"]["location"]["lat"];
+            let long = result["results"][0]["geometry"]["location"]["lng"];
+            start_coords = lat + "," + long;
+        }
 
-        let minDuration = Number.MAX_SAFE_INTEGER
-        let minPath = []
+        // iterates through destinations excluding start and end, if destination does not have a number consider it general query
+        // url request returns places that match query within ~20 miles (30000 meters) 
+        // of either the specific start address
+        console.log("STARTING GENERAL SEARCH");
+        
+        let type = 1;
+        let numSearch = this.state.allDestinations.length - 2;
+
+        // add start to matrixDestinations to be sent to API
+        this.setState(prevState => ({
+            matrixDestinations: [...prevState.matrixDestinations, start]
+        }));
+
+        // if end != start, add end as well
+        let end = this.state.allDestinations[this.state.allDestinations.length - 1];
+        if (start != end) {
+            this.setState(prevState => ({
+                matrixDestinations: [...prevState.matrixDestinations, end]
+            }));
+        }
+
+        // generate permDests and matrixDests
+        for (let i = 1; i < this.state.allDestinations.length - 1; i++) {            
+
+            // if dest has number, then its specific
+            if (/\d/.test(this.state.allDestinations[i])) {
+                // add to matrixDestinations as is
+                this.setState(prevState => ({
+                    matrixDestinations: [...prevState.matrixDestinations, this.state.allDestinations[i]]
+                }));
+
+                // add to permDestinations with type = 0 because its specific
+                this.setState(prevState => ({
+                    permDestinations: [...prevState.permDestinations, [this.state.allDestinations[i], 0]]
+                }));
+
+            // else general query
+            } else {
+                let query = this.state.allDestinations[i];
+                let url = generateGeneralSearchURL(query, start_coords);
+
+                // url request returns places that match query within ~20 miles (30000 meters) 
+                // of the starting coordinates
+                let response = await fetch(url);
+                let data = await response.json();
+                    
+                let results = data["results"];
+                
+                // arbitrarily set to 3 closest to minimize runtime #SPEED
+                for (let i = 0; i < 3; i++) {
+                    // if (results[i]["opening_hours"]["open_now"]) { #FIX: ignored for testing
+                        // add address to matrix destations
+                        this.setState(prevState => ({
+                            matrixDestinations: [...prevState.matrixDestinations, results[i]["formatted_address"]]
+                        }));
+                        // add [address, type] to permDests
+                        this.setState(prevState => ({
+                            permDestinations: [...prevState.permDestinations, [results[i]["formatted_address"], type]]
+                        }));
+                    // }                    
+
+                }
+                type++;
+            }
+        } 
+        return numSearch;
+    }
+
+    getDurationFromPath(distanceMatrix, path) {
+        var duration = 0
+        const { matrixDestinations } = this.state;
+        
+
+        // iterating through all the sequential pairs
+        for (let i = 0; i < path.length - 1; i++) {
+            let firstPoint = matrixDestinations.indexOf(path[i])
+            let secondPoint = matrixDestinations.indexOf(path[i + 1])
+
+            let thisDuration = distanceMatrix[firstPoint]["elements"][secondPoint]["duration"]["value"]
+            // console.log(path[i] + "==>" + path[i + 1])
+            // console.log(thisDuration)
+
+            duration += thisDuration
+        }
+        return duration
+    }
+
+    bruteForceShortestPath(distanceMatrix, numSearch) {
+        console.log("DISTANCE MATRIX22222: " + distanceMatrix);
+        
+        let startingDestination = this.state.allDestinations[0];
+        let endingDestination = this.state.allDestinations[this.state.allDestinations.length - 1];
+        let destinations = this.state.permDestinations.slice(1, this.state.permDestinations.length - 1);        
+        
+        let permutations = permutator(destinations, numSearch); 
+        console.log("PERMUTATIONS:");
+        console.log(permutations);        
+
+        let minDuration = Number.MAX_SAFE_INTEGER;
+        let minPath = [];
 
         permutations.forEach(perm => {
             var path = perm
@@ -164,9 +260,9 @@ export default class Home extends Component {
             }
         })
 
-        console.log("TOTAL SHORTEST PATH")
-        console.log(minPath.join(" ==> "))
-        console.log(minDuration)
+        // console.log("TOTAL SHORTEST PATH")
+        // console.log(minPath.join(" ==> "))
+        // console.log(minDuration)
 
         let origin = minPath[0]
         let waypoints = minPath.slice(1, minPath.length - 1)
@@ -184,7 +280,7 @@ export default class Home extends Component {
                 title: "Shortest path generated! Choose an app to open in"
             },
             buttonIndex => {
-                console.log(pathUrl)
+                // console.log(pathUrl)
                 if (BUTTONS[buttonIndex] == "Google Maps") {
                     Linking.openURL(pathUrl).catch((err) => console.error('An error occurred', err));
                 } else if (BUTTONS[buttonIndex] == "Apple Maps") {
@@ -196,24 +292,37 @@ export default class Home extends Component {
         )
     }
 
+    // calls distance matrix API with allDestinations
     getAllDistances() {
-        let url = generateAPIUrl(this.state.allDestinations)
-        console.log(url)
+        console.log("ALL DESTINATIONS:\n" + this.state.allDestinations);
+        
+        // find specific addresses for general queries
+        this.getGeneralLocations().then((numSearch) => {
+            console.log('GETTING GENERAL RESULTS FINISHED');
 
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                //let allDestinations = data["destination_addresses"]
-                //this.setState({ allDestinations })
-                // here we update the allDestinations in the state
-                // this replaces the generic names we type in with the specific addresses
-                // for example, Washington gets replaced with Washington, USA
-                // if we don't want the user interface to change, we can replace this with
-                // a different variable no problem
+            // uses matrixDestinations to return matrix of all distances between all possibilities
+            console.log("MATRIX: " + this.state.matrixDestinations);            
+            let url = generateAPIUrl(this.state.matrixDestinations);
+            console.log(url);
 
-                let distanceMatrix = data["rows"]
-                this.bruteForceShortestPath(distanceMatrix)
-            })
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    //let allDestinations = data["destination_addresses"]
+                    //this.setState({ allDestinations })
+                    // here we update the allDestinations in the state
+                    // this replaces the generic names we type in with the specific addresses
+                    // for example, Washington gets replaced with Washington, USA
+                    // if we don't want the user interface to change, we can replace this with
+                    // a different variable no problem
+                    let distanceMatrix = data["rows"]
+                    console.log("DISTANCE MATRIX:\n" + distanceMatrix);
+                    this.bruteForceShortestPath(distanceMatrix, numSearch)
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+        });
     }
 
     autocompleteText(text) {
@@ -227,6 +336,9 @@ export default class Home extends Component {
                 let autocomplete = data["predictions"]
                 this.setState({ autocomplete })
             })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
     }
 
     onPlaceChange(event, pos) {
@@ -256,6 +368,8 @@ export default class Home extends Component {
         destinations.push("")
         destinations.push(endDest)
         this.setState({ destinations })
+        // add value for lockPlace tracking
+        this.state.lockedPlaces.push(false)
     }
 
     // deletes either empty space or one with name
@@ -268,30 +382,40 @@ export default class Home extends Component {
             return
         }
 
-        // if pos == 0
-        if (pos == 0) {
+        // // if pos == 0
+        // if (pos == 0) {
 
-            // check if app is set to start at current location
-            if (self.state.startAtCurrentLocation) {
+        //     // check if app is set to start at current location
+        //     if (self.state.startAtCurrentLocation) {
 
-                // this should, by default, uncheck the checkbox
-                self.setState({ startAtCurrentLocation: !self.state.startAtCurrentLocation});
-            }
-        }
+        //         // this should, by default, uncheck the checkbox
+        //         self.setState({ startAtCurrentLocation: !self.state.startAtCurrentLocation});
+        //     }
+        // }
 
         destinations.splice(pos, 1)
         this.setState({ destinations })
-    }
-    
-    onSubmit() {
-        // filter out all of the empty destinations
-        let filteredDestinations = this.state.destinations.filter(destination => destination.length > 0)
 
-        let allDestinations = filteredDestinations
-        //allDestinations.unshift(this.state.startingPoint)
-        //this.state.returnBackHome ? allDestinations.push(this.state.startingPoint) : allDestinations.push(this.state.endingPoint)
-        //this.state.returnBackHome ? allDestinations.push(allDestinations[0]) : null   *** DON'T NEED THIS LINE HERE IF WE HAVE endEqualsStart()
-        this.setState({ allDestinations }, () => this.getAllDistances()) // for distance matrix stuff
+        // delete for lockPlace tracking
+        var locks = this.state.lockedPlaces
+        locks.splice(pos, 1)
+        this.setState({ locks })
+    }
+
+    
+    onSubmit() {        
+        // filter out all of the empty destinations
+        let filteredDestinations = this.state.destinations.filter(destination => destination.length > 0);
+        let allDestinations = filteredDestinations;
+
+
+
+        this.setState({permDestinations: []}, 
+                      () => this.setState({matrixDestinations: []}, 
+                        () => this.setState({ allDestinations }, 
+                            () => this.getAllDistances())));
+
+        // this.setState({ allDestinations }, () => this.getAllDistances()); // for distance matrix stuff
     }
     
     // populates final destination with starting destination at index 0 
@@ -321,6 +445,33 @@ export default class Home extends Component {
         
     }
 
+    // need to lock location in algo for routing
+    lockPlace(pos) {
+        if (pos === 0) {
+            return
+        }
+        if (this.state.lockedPlaces[pos] === true) {
+            this.state.lockedPlaces[pos] = false
+            console.log('Set to false')
+        }
+        else if (this.state.lockedPlaces[pos] === false) {
+            this.state.lockedPlaces[pos] = true
+            console.log('Set to true')
+        }
+    }
+
+    lockPlaceStyling(pos) {
+        if (pos < this.state.destinations.length - 1 && pos > 0 &&  this.state.lockedPlaces[pos] === true) {
+            return {
+                backgroundColor:'grey',
+                disabled: 'true',
+                opacity: .5
+            }
+        } else {
+            return "";
+        }
+    }
+
     render() {
         return (
             <Root>
@@ -340,31 +491,34 @@ export default class Home extends Component {
                                     <CheckBox checked={this.state.returnBackHome} onPress={this.endEqualsStart} />
                                     <Text>End your route at the starting point</Text>
                                 </View>
-                        
-                                {this.state.destinations.map((destinationName, pos) => 
-                                /*
-                                <Autocomplete
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                    data={this.state.autocomplete}
-                                    defaultValue={destinationName}
-                                    onChangeText={text => this.onPlaceChangeText(text, pos)}
-                                    placeholder="Enter place"
-                                    renderItem={sugg => <Item
-                                        onPress={() => (
-                                            this.onPlaceChangeText(sugg, pos)
-                                        )}
-                                        >
-                                        <Text>{sugg}</Text>
-                                    </Item>}
-                                />
+                                {this.state.destinations.slice(0, -1).map((destinationName, pos) => 
+                                /*	<Autocomplete	
+                                    autoCapitalize="none"	
+                                    autoCorrect={false}	
+                                    data={this.state.autocomplete}	
+                                    defaultValue={destinationName}	
+                                    onChangeText={text => this.onPlaceChangeText(text, pos)}	
+                                    placeholder="Enter place"	
+                                    renderItem={sugg => <Item	
+                                        onPress={() => (	
+                                            this.onPlaceChangeText(sugg, pos)	
+                                        )}	
+                                        >	
+                                        <Text>{sugg}</Text>	
+                                    </Item>}	
+                                />	
                                 */
                                     <Grid>
                                         <Col>
                                             <Item floatingLabel>
                                                 <Label class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
-                                                <Input {...this.endRouteStyling(pos)} value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
+                                                <Input {...this.lockPlaceStyling(pos)} value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                             </Item>
+                                        </Col>
+                                        <Col style={{width: "15%", top: 25}}>
+                                            <Button iconLeft transparent onPress={() => this.lockPlace(pos)}>
+                                                <Icon type='AntDesign' name='lock'/>
+                                            </Button>
                                         </Col>
                                         <Col style={{width: "15%", top: 25}}>
                                             <Button iconLeft transparent onPress={() => this.deletePlace(pos)}>
@@ -374,11 +528,33 @@ export default class Home extends Component {
                                     </Grid>
                                 )}
                                 <View style={styles.innerContainer}>
-                                    <Button iconLeft transparent onPress={this.addPlace}> 
+                                    <Button iconLeft onPress={this.addPlace}> 
                                         <Icon name='add' />
-                                        <Text>Add a place</Text>
+                                        <Text>Add a stop</Text>
                                     </Button>
                                 </View>
+                               
+                            </Form>
+
+                            <Form>
+                                <Grid>
+                                        <Col>
+                                            <Item floatingLabel>
+                                                <Label class="active">{ENDING_PLACE_TEXT}</Label>
+                                                <Input {...this.endRouteStyling(this.state.destinations.length - 1)} value={this.state.destinations.slice(-1)[0]} onChange={(event) => this.onPlaceChange(event, this.state.destinations.length - 1)}/>
+                                            </Item>
+                                        </Col>
+                                        <Col style={{width: "15%", top: 25}}>
+                                            <Button iconLeft transparent >
+                                                <Icon type='AntDesign' name='lock'/>
+                                            </Button>
+                                        </Col>
+                                        <Col style={{width: "15%", top: 25}}>
+                                            <Button iconLeft transparent onPress={() => this.deletePlace(this.state.destinations.length)}>
+                                                <Icon type='AntDesign' name='delete'/>
+                                            </Button>
+                                        </Col>
+                                    </Grid>
                             </Form>
                             <View style={styles.innerContainer}>
                                 <Button iconLeft 
