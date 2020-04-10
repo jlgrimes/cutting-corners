@@ -22,19 +22,20 @@ Geocode.setApiKey(MAPS_API_KEY);
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
 var CANCEL_INDEX = 3;
 let CURRENT_ADDRESS = "";
-let CURRENT_COORDS = "42.2745128,-83.7355595";
+let CURRENT_COORDS = "";
 
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         height: 100,
         padding: 20,
-        justifyContent: "space-between"
+        justifyContent: "space-between",
     },
     innerContainer: {
         flexDirection: 'row',
         paddingTop: 20,
-        justifyContent: "space-evenly"
+        paddingBottom: 20,
+        justifyContent: "space-evenly",
     },
     title: {
         fontSize: 44,
@@ -59,6 +60,14 @@ const styles = StyleSheet.create({
     titleBlock: {
         paddingTop: 50,
         paddingBottom: 30,
+    },
+    input: {
+        borderColor: "lightgrey",
+        borderRadius: 20,
+        borderStyle: "solid",
+        borderWidth: 1,
+        margin: 10,
+        paddingBottom: 10,
     }
 })
 
@@ -145,6 +154,7 @@ export default class Home extends Component {
             start_coords = lat + "," + long;
         }
 
+
         // iterates through destinations excluding start and end, if destination does not have a number consider it general query
         // url request returns places that match query within ~20 miles (30000 meters) 
         // of either the specific start address
@@ -192,9 +202,10 @@ export default class Home extends Component {
                 let data = await response.json();
                     
                 let results = data["results"];
-                
+                let minResults = Math.min(3, results.length);
+
                 // arbitrarily set to 3 closest to minimize runtime #SPEED
-                for (let i = 0; i < 3; i++) {
+                for (let i = 0; i < minResults; i++) {
                     // if (results[i]["opening_hours"]["open_now"]) { #FIX: ignored for testing
                         // add address to matrix destations
                         this.setState(prevState => ({
@@ -480,7 +491,7 @@ export default class Home extends Component {
                                     Find the quickest path between all your daily stops
                                 </Text>
                             </View>
-                            <Form>
+                            <Form >
                                 <View style={styles.innerContainer}>
                                     <CheckBox checked={this.state.returnBackHome} onPress={this.endEqualsStart} />
                                     <Text>End your route at the starting point</Text>
@@ -502,10 +513,10 @@ export default class Home extends Component {
                                     </Item>}	
                                 />	
                                 */
-                                    <Grid>
+                                    <Grid style={styles.input}>
                                         <Col>
                                             <Item floatingLabel>
-                                                <Label class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
+                                                <Label style={{padding: 20,}} class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
                                                 <Input {...this.lockPlaceStyling(pos)} value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                             </Item>
                                         </Col>
@@ -521,7 +532,7 @@ export default class Home extends Component {
                                         </Col>
                                     </Grid>
                                 )}
-                                <View style={styles.innerContainer}>
+                                <View style={styles.innerContainer} >
                                     <Button iconLeft onPress={this.addPlace}> 
                                         <Icon name='add' />
                                         <Text>Add a stop</Text>
@@ -531,10 +542,10 @@ export default class Home extends Component {
                             </Form>
 
                             <Form>
-                                <Grid>
+                                <Grid style={styles.input}> 
                                         <Col>
                                             <Item floatingLabel>
-                                                <Label class="active">{ENDING_PLACE_TEXT}</Label>
+                                                <Label style={{padding: 20,}} class="active">{ENDING_PLACE_TEXT}</Label>
                                                 <Input {...this.endRouteStyling(this.state.destinations.length - 1)} value={this.state.destinations.slice(-1)[0]} onChange={(event) => this.onPlaceChange(event, this.state.destinations.length - 1)}/>
                                             </Item>
                                         </Col>
@@ -551,7 +562,7 @@ export default class Home extends Component {
                                     </Grid>
                             </Form>
                             <View style={styles.innerContainer}>
-                                <Button iconLeft 
+                                <Button iconLeft  
                                     onPress={this.onSubmit}>
                                     <Icon name='search' />
                                     <Text>Find Shortest Path</Text>
