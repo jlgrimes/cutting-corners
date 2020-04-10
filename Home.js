@@ -455,18 +455,13 @@ export default class Home extends Component {
         if (pos === 0) {
             return
         }
-        if (this.state.lockedPlaces[pos] === true) {
-            this.state.lockedPlaces[pos] = false
-            console.log('Set to false')
-        }
-        else if (this.state.lockedPlaces[pos] === false) {
-            this.state.lockedPlaces[pos] = true
-            console.log('Set to true')
-        }
+        let lockedPlaces = this.state.lockedPlaces;
+        lockedPlaces[pos] = !lockedPlaces[pos];
+        this.setState({ lockedPlaces });
     }
 
     lockPlaceStyling(pos) {
-        if (pos < this.state.destinations.length - 1 && pos > 0 &&  this.state.lockedPlaces[pos] === true) {
+        if (this.state.lockedPlaces[pos] === true && pos < this.state.destinations.length - 1 && pos > 0 ) {
             return {
                 backgroundColor:'grey',
                 disabled: 'true',
