@@ -360,7 +360,7 @@ export default class Home extends Component {
                                     </Grid>
                                 )}
                                 <View style={styles.innerContainer}>
-                                    <Button iconLeft transparent onPress={this.addPlace}> 
+                                    <Button iconLeft onPress={this.addPlace}> 
                                         <Icon name='add' />
                                         <Text>Add a stop</Text>
                                     </Button>
@@ -388,7 +388,6 @@ export default class Home extends Component {
                                         </Col>
                                     </Grid>
                             </Form>
-
                             <View style={styles.innerContainer}>
                                 <Button iconLeft 
                                     onPress={this.onSubmit}>
