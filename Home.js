@@ -51,43 +51,52 @@ const styles = StyleSheet.create({
         zIndex: 1
       },
     container: {
+        backgroundColor: 'snow',
         flexDirection: 'row',
         height: 100,
         padding: 20,
         justifyContent: "space-between",
     },
     innerContainer: {
+        backgroundColor: 'snow',
         flexDirection: 'row',
         paddingTop: 20,
         paddingBottom: 20,
         justifyContent: "space-evenly",
     },
     title: {
+        backgroundColor: 'snow',
         fontSize: 44,
         fontWeight: "400",
         textAlign: "center"
     },
     subtitle: {
+        backgroundColor: 'snow',
         fontStyle: "italic",
         fontWeight: "300",
         textAlign: "center"
     },
     header: {
+        backgroundColor: 'snow',
         fontSize: 32,
         fontWeight: "400"
     },
     explanationText: {
+        backgroundColor: 'snow',
         textAlign: "center"
     },
     text: {
+        backgroundColor: 'snow',
         textAlign: "center"
     },
     titleBlock: {
+        backgroundColor: 'snow',
         paddingTop: 50,
         paddingBottom: 30,
     },
     input: {
         borderColor: "lightgrey",
+        backgroundColor: 'white',
         borderRadius: 20,
         borderStyle: "solid",
         borderWidth: 1,
@@ -649,10 +658,10 @@ export default class Home extends Component {
 
     render() {
         return (
-            <Root>
+            <Root style={{backgroundColor: 'snow'}}>
                 <View style={styles.container}>
-                    <Container>
-                        <Content>
+                    <Container style={{backgroundColor: 'snow'}}>
+                        <Content style={{backgroundColor: 'snow'}}>
                             <View style={styles.titleBlock}>
                                 <Text style={styles.title}>
                                     Cutting Corners
@@ -702,8 +711,8 @@ export default class Home extends Component {
 
                             <Form>
                                 <Grid style={styles.input}> 
-                                        <Col>
-                                            <Item floatingLabel>
+                                        <Col >
+                                            <Item floatingLabel >
                                                 <Label style={{padding: 20,}} class="active">{ENDING_PLACE_TEXT}</Label>
                                                 <Input {...this.endRouteStyling(this.state.destinations.length - 1)} value={this.state.destinations.slice(-1)[0]} onChange={(event) => this.onPlaceChange(event, this.state.destinations.length - 1)}/>
                                             </Item>
