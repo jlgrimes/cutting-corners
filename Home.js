@@ -497,9 +497,8 @@ export default class Home extends Component {
     lockPlaceStyling(pos) {
         if (this.state.lockedPlaces[pos] === true && pos < this.state.destinations.length - 1 && pos > 0 ) {
             return {
-                backgroundColor:'grey',
-                disabled: 'true',
-                opacity: .5
+                backgroundColor:'red',
+                opacity: .5,
             }
         } else {
             return "";
@@ -578,14 +577,15 @@ export default class Home extends Component {
                                         <Col>
                                             <Item floatingLabel>
                                                 <Label style={{padding: 20,}} class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
-                                                <Input {...this.lockPlaceStyling(pos)} value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
+                                                <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
                                             </Item>
                                         </Col>
-                                        <Col style={{width: "15%", top: 25}}>
-                                            <Button iconLeft transparent onPress={() => this.lockPlace(pos)}>
+                                        {pos ? <Col style={{width: "15%", top: 25}}>
+                                            <Button iconLeft transparent style={this.state.lockedPlaces[pos] ? {backgroundColor: 'lightgrey'} : {backgroundColor: 'white'}} onPress={() => this.lockPlace(pos)}>
                                                 <Icon type='AntDesign' name='lock'/>
                                             </Button>
                                         </Col>
+                                        : <Col style={{width: "15%", top: 25}}></Col>}
                                         <Col style={{width: "15%", top: 25}}>
                                             <Button iconLeft transparent onPress={() => this.deletePlace(pos)}>
                                                 <Icon type='AntDesign' name='delete'/>
@@ -611,12 +611,7 @@ export default class Home extends Component {
                                             </Item>
                                         </Col>
                                         <Col style={{width: "15%", top: 25}}>
-                                            <Button iconLeft transparent >
-                                                <Icon type='AntDesign' name='lock'/>
-                                            </Button>
-                                        </Col>
-                                        <Col style={{width: "15%", top: 25}}>
-                                            <Button iconLeft transparent onPress={() => this.deletePlace(this.state.destinations.length)}>
+                                            <Button iconLeft transparent onPress={() => this.deletePlace(this.state.destinations.length - 1)}>
                                                 <Icon type='AntDesign' name='delete'/>
                                             </Button>
                                         </Col>
