@@ -34,6 +34,7 @@ import { add, max } from 'react-native-reanimated';
 import { withOrientation } from 'react-navigation';
 import { Overlay } from 'react-native-elements';
 import * as Progress from 'react-native-progress';
+import LOGO from './assets/icon.png';
 
 Geocode.setApiKey(MAPS_API_KEY);
 
