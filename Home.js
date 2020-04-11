@@ -24,7 +24,7 @@ import { Container, Header, Left, Body, Right, Title, Content,
     CheckBox, Toast, ListItem,
     Row} from 'native-base';
 import { View, StyleSheet, Animated} from 'react-native'
-import { generateAPIUrl, permutator, generatePathUrl, generatePlaceAutocompleteUrl, 
+import { generateAPIUrl, permutator, generatePathUrl, generatePlaceAutocompleteUrl,  extractAddress, concatAddress,
     PLACE_TEXT, STARTING_PLACE_TEXT, ENDING_PLACE_TEXT, generateGeneralSearchURL, setStateAsync } from './const';
 import { Linking } from 'expo';
 import DraggableFlatList from "react-native-draggable-flatlist";
@@ -235,6 +235,7 @@ export default class Home extends Component {
                 // console.log(data);
 
                 let results = data["results"];
+                console.log(results)
 
                 if (results.length == 0) {
                     showToast("At least one of your general searches returned no results");
@@ -252,10 +253,17 @@ export default class Home extends Component {
                     hasHours = results[i].hasOwnProperty('opening_hours');
                     if (hasHours) open = results[i]["opening_hours"]["open_now"];
                     if ((hasHours && open)) { // handles case where store doesnt have hours
+
+                        // the address name now has the name! let's go
+                        const location = {
+                            "name": results[i]["name"],
+                            "address": results[i]["formatted_address"]
+                        }
+
                         // add address to matrix destations                        
-                        matrixDestinations.push(results[i]["formatted_address"]);
+                        matrixDestinations.push(location);
                         // add [address, type] to permDests
-                        permDestinations.push([results[i]["formatted_address"], type]);
+                        permDestinations.push([location, type]);
                     }   
                 }
                 if (!open) {
@@ -328,7 +336,11 @@ export default class Home extends Component {
             path.unshift(startingDestination)
             path.push(endingDestination)
 
-            let pathDuration = this.getDurationFromPath(distanceMatrix, matrixDestinations, path)
+            // extract the addresses from the general locations
+            const pathAddresses = extractAddress(path)
+            const matrixDestinationsAddresses = extractAddress(matrixDestinations)
+
+            let pathDuration = this.getDurationFromPath(distanceMatrix, matrixDestinationsAddresses, pathAddresses)
             // console.log(path.join(" ==> ") + " total distance: " + pathDuration)
 
             if (pathDuration < minDuration) {
@@ -342,6 +354,8 @@ export default class Home extends Component {
         // console.log("TOTAL SHORTEST PATH")
         // console.log(minPath.join(" ==> "))
         // console.log(minDuration)
+
+        minPath = concatAddress(minPath)
 
         let origin = minPath[0]
         let waypoints = minPath.slice(1, minPath.length - 1)
@@ -394,7 +408,7 @@ export default class Home extends Component {
     
             
             // uses matrixDestinations to return matrix of all distances between all possibilities
-            let url = generateAPIUrl(matrixDestinations);
+            let url = generateAPIUrl(extractAddress(matrixDestinations));
             console.log(url);
             
 

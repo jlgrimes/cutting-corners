@@ -14,6 +14,12 @@ export const generatePathUrl = (origin, waypoints, destination) => MAPS_PATH_BAS
 export const generatePlaceAutocompleteUrl = (text) => PLACE_AUTOCOMPLETE_API_BASE_URL + "input=" + text + "&key=" + MAPS_API_KEY;
 export const generateGeneralSearchURL = (query, CURRENT_COORDS) => GENERAL_SEARCH_BASE_URL + query + "&location=" + CURRENT_COORDS + "&radius=50000&key=" + MAPS_API_KEY; 
 
+// extracts the address from general locations, returns the original if its a specific location
+export const extractAddress = (destinations) => destinations.map(point => point.address !== undefined ? point.address : point)
+
+// the text that shows up for each address in google maps
+export const concatAddress = (path) => path.map(point => point.name !== undefined ? (point.name + " " + point.address) : point)
+
 // maintain list of "types" already seen in perm
 export const permutator = (inputArr, numSearch) => {  
   let result = [];
