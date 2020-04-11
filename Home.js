@@ -1,8 +1,21 @@
 // Ideas:
-//      Notification if all results for search query are closed, line 186
-// #SPEED: places to potentially improve speed
-// FIX:
 //   - ALERT: If start/end not specific addresses
+
+// BUGS:
+// - #1 if over like 3 terms distancematrix API denies request
+// - if select specific, then later change it, it wont go back to general
+// - "computing" bar doesnt go away after cancel
+// - on phone, option for Select best option when autocompleting not visible
+// - probably a million more
+
+// ASSUMPTIONS:
+// - start/end specific
+
+// LOAD ERRORS
+// - Roboto_medium font issue on android
+
+// FEATURES
+// - if all results for general search are closed, will notify user and return
 
 import MAPS_API_KEY from './api-key'
 import React, { Component } from 'react';
@@ -97,9 +110,8 @@ export default class Home extends Component {
             returnBackHome: false,
             destinations: ["", ""], // initializes three empty places
             allDestinations: ["", ""], // used for distance matrix calc
-            permDestinations: [], // list of [address, type] pairs to accomodate general queries. type = 0 for specific addres, type = 1+ for general address
-            matrixDestinations: [], // list of all possible destinations including all general search results,
-            lockedPlaces: [false, false], // needs to be same size as list
+            lockedPlaces: [false, false], // needs to be same size as list,
+            specific: [true],
             autocomplete: [],
             currentAddress: "",
             currentCoords: "",
@@ -168,7 +180,7 @@ export default class Home extends Component {
     async getGeneralLocations() {
         let start_coords = this.state.currentCoords;
         let start = this.state.destinations[0];
-
+        
         // if user changed start from current location
         // set start_coords to coordinates of the specified start address
         if (start != this.state.currentAddress) {
@@ -189,6 +201,7 @@ export default class Home extends Component {
         let numSearch = this.state.allDestinations.length - 2;
         let matrixDestinations = [start];
         let permDestinations = [];
+        let searchTypes = [0]; // type of start is specific
 
         // if end != start, add end as well
         let end = this.state.allDestinations[this.state.allDestinations.length - 1];
@@ -198,15 +211,16 @@ export default class Home extends Component {
 
         // generate permDests and matrixDests
         for (let i = 1; i < this.state.allDestinations.length - 1; i++) {     
-            // console.log("entered loop");       
-
-            // if dest has number, then its specific
-            if (/\d/.test(this.state.allDestinations[i])) {                
+            // if specific set to true
+            if (this.state.specific[i]) {                
                 // add to matrixDestinations as is
                 matrixDestinations.push(this.state.allDestinations[i]);
 
                 // add to permDestinations with type = 0 because its specific
                 permDestinations.push([this.state.allDestinations[i], 0]);
+
+                // add to type list
+                searchTypes.push(0);
             
                 // else general query
             } else {
@@ -221,23 +235,46 @@ export default class Home extends Component {
                 // console.log(data);
 
                 let results = data["results"];
+
+                if (results.length == 0) {
+                    showToast("At least one of your general searches returned no results");
+                    return;
+                }
+
                 // FIX: if results lenght is zero display error
                 let numResults = Math.min(MAX_GENERAL_RESULTS, results.length);
                 
+                let hasHours = false;
+                let open = false;
+
                 // arbitrarily set to 3 closest to minimize runtime
                 for (let i = 0; i < numResults; i++) {
-                    let hasHours = results[i].hasOwnProperty('opening_hours');
-                    if ((hasHours && results[i]["opening_hours"]["open_now"]) || !hasHours) {
+                    hasHours = results[i].hasOwnProperty('opening_hours');
+                    if (hasHours) open = results[i]["opening_hours"]["open_now"];
+                    if ((hasHours && open)) { // handles case where store doesnt have hours
                         // add address to matrix destations                        
                         matrixDestinations.push(results[i]["formatted_address"]);
                         // add [address, type] to permDests
                         permDestinations.push([results[i]["formatted_address"], type]);
                     }   
                 }
+                if (!open) {
+                    showToast("All locations for search '" + query + "' are closed");
+                    return;
+                }
+                // add to type list
+                searchTypes.push(type);
                 type++;
             }
         } 
-        return [numSearch, matrixDestinations, permDestinations];
+
+        searchTypes.push(0); // type of end is specific
+
+        console.log("PERM DEST:\n");
+        permDestinations.forEach((i) => console.log(i));
+        
+
+        return [numSearch, matrixDestinations, permDestinations, searchTypes];
     }
 
     getDurationFromPath(distanceMatrix, matrixDestinations, path) {
@@ -254,13 +291,32 @@ export default class Home extends Component {
         return duration
     }
 
-    bruteForceShortestPath(distanceMatrix, numSearch, matrixDestinations, permDestinations) {
+    bruteForceShortestPath(distanceMatrix, numSearch, matrixDestinations, permDestinations, searchTypes) {
         let startingDestination = this.state.allDestinations[0];
-        let endingDestination = this.state.allDestinations[this.state.allDestinations.length - 1];
+        let endingDestination = this.state.allDestinations[this.state.allDestinations.length - 1];        
         
-        let permutations = permutator(permDestinations, numSearch); 
-        // console.log("PERMUTATIONS:");
-        // console.log(permutations);        
+        // perms generated will be for destinations excluding start/end
+        let permutations = permutator(permDestinations, numSearch);
+
+        // iterates through the types returned from a permutation,
+        // if the types dont match in a locked spot, remove that perm
+        permutations = permutations.filter((el) => { 
+            let permTypes = el[1];
+            
+            for (let i = 0; i < permTypes.length; i++) {
+                let j = i + 1; // index relative to allDest/searchTypes array
+                if (this.state.lockedPlaces[j] && permTypes[i] != searchTypes[j]) return false;
+            }
+            return true;
+        });
+
+        permutations = permutations.map((el) =>  el[0]);
+
+        console.log("LOCKED\n" + this.state.lockedPlaces);
+
+        console.log("PERM AFTER:");
+        // permutations.forEach((i) => console.log(i));
+        permutations.forEach((i) => console.log(i));
 
         let minDuration = Number.MAX_SAFE_INTEGER;
         let minPath = [];
@@ -294,7 +350,7 @@ export default class Home extends Component {
         let pathUrl = generatePathUrl(origin, waypoints, destination)
         console.log(pathUrl)
 
-        let applePathUrl = "http://maps.apple.com/?daddr=" + waypoints[0].split(" ").join("+")
+        // let applePathUrl = "http://maps.apple.com/?daddr=" + waypoints[0].split(" ").join("+")
 
         ActionSheet.show(
             {
@@ -323,9 +379,12 @@ export default class Home extends Component {
         this.getGeneralLocations().then((result) => {
             console.log('GETTING GENERAL RESULTS FINISHED');
 
+            if (typeof result == 'undefined') return;
+
             let numSearch = result[0];
             let matrixDestinations = result[1];
             let permDestinations = result[2];
+            let searchTypes = result[3];
 
             // console.log("\nmatrix destinations:");
             // matrixDestinations.forEach(el => console.log(el));
@@ -349,9 +408,15 @@ export default class Home extends Component {
                     // for example, Washington gets replaced with Washington, USA
                     // if we don't want the user interface to change, we can replace this with
                     // a different variable no problem
-                    
-                    let distanceMatrix = data["rows"]
-                    this.bruteForceShortestPath(distanceMatrix, numSearch, matrixDestinations, permDestinations)
+                    // console.log(data);
+                    if (data["status"] != "OK") {
+                        showToast('Too many places, please reduce');
+                        return;
+                    } else {
+                        console.log("\nDISTANCE MATRIX RETURNED STATUS OK\n");
+                    }
+                    let distanceMatrix = data["rows"];
+                    this.bruteForceShortestPath(distanceMatrix, numSearch, matrixDestinations, permDestinations, searchTypes);
                 })
                 .catch((error) => {
                     console.error('Error:', error);
@@ -368,7 +433,7 @@ export default class Home extends Component {
             .then(response => response.json())
             .then(data => {
                 let autocomplete = data["predictions"].map(pred => pred.description)
-                console.log(autocomplete)
+                // console.log(autocomplete)
                 this.setState({ autocomplete })
             })
             .catch((error) => {
@@ -386,11 +451,10 @@ export default class Home extends Component {
         }
 
         this.setState({ destinations })
-        console.log(destinations)
+        // console.log(destinations)
     }
 
     onPlaceChangeText(text, pos) {
-        console.log("YUh")
         var destinations = this.state.destinations
         destinations[pos] = text
         this.autocompleteText(text)
@@ -398,17 +462,22 @@ export default class Home extends Component {
         this.setState({ destinations })
     }
 
-    onAutocompleteSelect(sugg, pos) {
-        console.log(pos)
+    onAutocompleteSelect(sugg, pos, specificFlag) {
+        // console.log(sugg)
+        // console.log(pos)
         // we want to wipe autocompelete as well
         let autocomplete = []
 
         var destinations = this.state.destinations
         destinations[pos] = sugg
+        let specific = this.state.specific;
+        specific[pos] = specificFlag;
+
         this.setState({ 
             destinations, 
             autocomplete,
-            autocompleteOverlayVisible: false   // hide the modal
+            autocompleteOverlayVisible: false,   // hide the modal
+            specific
         })
     }
 
@@ -419,13 +488,16 @@ export default class Home extends Component {
         destinations.push("")
         destinations.push(endDest)
         this.setState({ destinations })
-        // add value for lockPlace tracking
-        this.state.lockedPlaces.push(false)
+
+        // add value for lockPlace tracking/specifcs tracking
+        this.setState({lockedPlaces: [...this.state.lockedPlaces, false]});
+        this.setState({specific: [...this.state.specific, false]});
 
         this.setState({
             autocompleteOverlayVisible: true,
             autocompletePos: destinations.length - 2
         })
+
     }
 
     // deletes either empty space or one with name
@@ -442,14 +514,26 @@ export default class Home extends Component {
         this.setState({ destinations })
 
         // delete for lockPlace tracking
-        var locks = this.state.lockedPlaces
-        locks.splice(pos, 1)
-        this.setState({ locks })
+        var lockedPlaces = this.state.lockedPlaces
+        lockedPlaces.splice(pos, 1)
+        this.setState({ lockedPlaces })
+
+        let specific = this.state.specific;
+        specific.splice(pos, 1);
+        this.setState({ specific });
+
     }
 
     
     onSubmit() {
-        this.setState({computing: true}) 
+        console.log("START: " + this.state.destinations[0]);
+        console.log("CURRENT ADD: " + this.state.currentAddress);
+        
+        
+        console.log("SPECIFIC:\n" + this.state.specific);
+        console.log("LOCKED:\n" + this.state.lockedPlaces);
+        
+        this.setState({computing: true}) ;
         // filter out all of the empty destinations
         let filteredDestinations = this.state.destinations.filter(destination => destination.length > 0);
         let allDestinations = filteredDestinations;
@@ -525,7 +609,7 @@ export default class Home extends Component {
 
             <ListItem
                 onPress={() => (	
-                    this.onAutocompleteSelect(this.state.destinations[this.state.autocompletePos], this.state.autocompletePos)	
+                    this.onAutocompleteSelect(this.state.destinations[this.state.autocompletePos], this.state.autocompletePos, false)	
                 )}	
                 >	
                 <Text>Find best location</Text>	
@@ -540,7 +624,7 @@ export default class Home extends Component {
                 renderItem={sugg => 
                     <ListItem
                         onPress={() => (	
-                            this.onAutocompleteSelect(sugg, this.state.autocompletePos)	
+                            this.onAutocompleteSelect(sugg, this.state.autocompletePos, true)	
                         )}	
                         >	
                         <Text>{sugg}</Text>	

@@ -17,10 +17,11 @@ export const generateGeneralSearchURL = (query, CURRENT_COORDS) => GENERAL_SEARC
 // maintain list of "types" already seen in perm
 export const permutator = (inputArr, numSearch) => {  
   let result = [];
+  // let typesALL = [];
 
-  const permute = (arr, numSearch, addresses = [], types) => {
+  const permute = (arr, numSearch, addresses = [], types = []) => {
     if (addresses.length === numSearch) {
-      result.push(addresses);        
+      result.push([addresses, types]);
     } else {
       for (let i = 0; i < arr.length; i++) {
         let curr = arr.slice(); 
@@ -29,15 +30,14 @@ export const permutator = (inputArr, numSearch) => {
         let type = next[1];
 
         // always put in specific addresses, otherwise check general type not in types already
-        if ((type === 0 && !addresses.includes(address)) || !types.has(type)) {
-            permute(curr.slice(), numSearch, addresses.concat(address), types.add(type));
-            types.delete(type);
+        if ((type === 0 && !addresses.includes(address)) || !types.includes(type)) {
+            permute(curr.slice(), numSearch, addresses.concat(address), types.concat(type));
         }
      }
    }
  }
  
- permute(inputArr, numSearch, [], new Set());
+ permute(inputArr, numSearch);
 
  return result;
 }
