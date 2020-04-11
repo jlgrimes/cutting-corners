@@ -339,6 +339,8 @@ export default class Home extends Component {
         let minPath = [];
 
         const progressIncr = 1 / permutations.length;
+        console.log("PROGRESS INCREMENT")
+        console.log(progressIncr)
 
         permutations.forEach(perm => {
             var path = perm
@@ -356,6 +358,8 @@ export default class Home extends Component {
                 minDuration = pathDuration
                 minPath = path
             }
+            console.log("PROGRESS: ")
+            console.log(this.state.computingProgress)
 
             this.setState({computingProgress: this.state.computingProgress += progressIncr})
         })
@@ -373,7 +377,7 @@ export default class Home extends Component {
         let pathUrl = generatePathUrl(origin, waypoints, destination)
         console.log(pathUrl)
 
-        // let applePathUrl = "http://maps.apple.com/?daddr=" + waypoints[0].split(" ").join("+")
+        let applePathUrl = "http://maps.apple.com/?daddr=" + waypoints[0].split(" ").join("+")
 
         ActionSheet.show(
             {
