@@ -378,7 +378,12 @@ export default class Home extends Component {
         let pathUrl = generatePathUrl(origin, waypoints, destination)
         console.log(pathUrl)
 
-        let applePathUrl = "http://maps.apple.com/?daddr=" + waypoints[0].split(" ").join("+")
+        console.log("WAYPOINTS length:")
+        console.log(waypoints.length)
+        // if we have waypoints, have Apple Maps use the first one as the destination
+        // if no waypoints exist, have Apple Maps use the final destination as the destination
+        let appleMapsDestination = waypoints.length ? waypoints[0] : destination
+        let applePathUrl = "http://maps.apple.com/?daddr=" + appleMapsDestination.split(" ").join("+")
 
         ActionSheet.show(
             {
