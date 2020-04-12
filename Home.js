@@ -324,25 +324,20 @@ export default class Home extends Component {
         // iterates through the types returned from a permutation,
         // if the types dont match in a locked spot, remove that perm
         permutations = permutations.filter((el) => { 
+            let permAdd = el[0];
             let permTypes = el[1];
             
             for (let i = 0; i < permTypes.length; i++) {
                 let j = i + 1; // index relative to allDest/searchTypes array
                 
-                // let locked = this.state.lockedPlaces[j];
-                // let permType = permTypes[i];
-                // let searchType = searchTypes[j];
+                let locked = this.state.lockedPlaces[j];
+                let permType = permTypes[i];
+                let searchType = searchTypes[j];
 
-                // if (locked) {
-                //     if (permType == 0) { // for specific search
-
-                //     } else { // for general
-
-                //     }
-
-                // }
-
-                if (this.state.lockedPlaces[j] && permTypes[i] != searchTypes[j]) return false;
+                if (locked) {
+                    if (permType != searchType) return false;
+                    if (permType == 0 && permAdd[i] != this.state.allDestinations[j]) return false; // for specific search
+                }
             }
             return true;
         });
