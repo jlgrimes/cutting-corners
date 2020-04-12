@@ -25,7 +25,7 @@ import { Container, Header, Left, Body, Right, Title, Content,
     Row} from 'native-base';
 import { View, StyleSheet, Animated} from 'react-native'
 import { generateAPIUrl, permutator, generatePathUrl, generatePlaceAutocompleteUrl,  extractAddress, concatAddress,
-    PLACE_TEXT, STARTING_PLACE_TEXT, ENDING_PLACE_TEXT, generateGeneralSearchURL, setStateAsync } from './const';
+    PLACE_TEXT, STARTING_PLACE_TEXT, ENDING_PLACE_TEXT, generateGeneralSearchURL } from './const';
 import { Linking } from 'expo';
 import DraggableFlatList from "react-native-draggable-flatlist";
 import Autocomplete from 'native-base-autocomplete';
@@ -120,7 +120,7 @@ export default class Home extends Component {
             returnBackHome: false,
             destinations: ["", ""], // initializes three empty places
             allDestinations: ["", ""], // used for distance matrix calc
-            lockedPlaces: [false, false], // needs to be same size as list,
+            lockedPlaces: [true], // needs to be same size as list,
             specific: [true],
             autocomplete: [],
             currentAddress: "",
@@ -136,12 +136,6 @@ export default class Home extends Component {
         this.endEqualsStart = this.endEqualsStart.bind(this);
         this.endRouteStyling = this.endRouteStyling.bind(this);
         this.lockPlaceStyling = this.lockPlaceStyling.bind(this);
-    }
-
-    setStateAsync(state) {
-        return new Promise((resolve, reject) => {
-            this.setState(state, resolve, reject)
-        });
     }
 
     componentDidMount() {
@@ -252,31 +246,42 @@ export default class Home extends Component {
                     return;
                 }
 
-                // FIX: if results lenght is zero display error
-                let numResults = Math.min(MAX_GENERAL_RESULTS, results.length);
-                
                 let hasHours = false;
                 let open = false;
 
-                // arbitrarily set to 3 closest to minimize runtime
-                for (let i = 0; i < numResults; i++) {
-                    hasHours = results[i].hasOwnProperty('opening_hours');
-                    if (hasHours) open = results[i]["opening_hours"]["open_now"];
-                    if ((hasHours && open)) { // handles case where store doesnt have hours
+                let locationResults = [];
+                let permResults = [];
+
+                // // arbitrarily set to 3 closest to minimize runtime
+                for (let k = 0; k < results.length; k++) {
+                    if (locationResults.length >= 4) break;
+
+                    hasHours = results[k].hasOwnProperty('opening_hours');
+                    
+                    // console.log("name:" + results[k]["name"]);
+                    // console.log("hasHOURS:" + hasHours);
+                    // console.log("open:" + open);
+                    
+                    if (hasHours) open = results[k]["opening_hours"]["open_now"];
+                    if ((hasHours && open) || !hasHours) { // handles case where store doesnt have hours
 
                         // the address name now has the name! let's go
                         const location = {
-                            "name": results[i]["name"],
-                            "address": results[i]["formatted_address"]
+                            "name": results[k]["name"],
+                            "address": results[k]["formatted_address"]
                         }
 
                         // add address to matrix destations                        
-                        matrixDestinations.push(location);
+                        locationResults.push(location);
                         // add [address, type] to permDests
-                        permDestinations.push([location, type]);
+                        permResults.push([location, type]);
                     }   
                 }
-                if (!open) {
+
+                matrixDestinations = matrixDestinations.concat(locationResults);
+                permDestinations = permDestinations.concat(permResults);
+
+                if (locationResults.length == 0) {
                     showToast("All locations for search '" + query + "' are closed");
                     return;
                 }
@@ -323,6 +328,20 @@ export default class Home extends Component {
             
             for (let i = 0; i < permTypes.length; i++) {
                 let j = i + 1; // index relative to allDest/searchTypes array
+                
+                // let locked = this.state.lockedPlaces[j];
+                // let permType = permTypes[i];
+                // let searchType = searchTypes[j];
+
+                // if (locked) {
+                //     if (permType == 0) { // for specific search
+
+                //     } else { // for general
+
+                //     }
+
+                // }
+
                 if (this.state.lockedPlaces[j] && permTypes[i] != searchTypes[j]) return false;
             }
             return true;
@@ -359,8 +378,8 @@ export default class Home extends Component {
                 minDuration = pathDuration
                 minPath = path
             }
-            console.log("PROGRESS: ")
-            console.log(this.state.computingProgress)
+            // console.log("PROGRESS: ")
+            // console.log(this.state.computingProgress)
 
             this.setState({computingProgress: this.state.computingProgress += progressIncr})
         })
@@ -375,11 +394,16 @@ export default class Home extends Component {
         let waypoints = minPath.slice(1, minPath.length - 1)
         let destination = minPath[minPath.length - 1]
 
+        console.log("MIN PATH:\n");
+        minPath.forEach(i => console.log(i));
+        
+        console.log("LOCKED\n" + this.state.lockedPlaces);
+        console.log("SPECIFIC\n" + this.state.specific);
+        
+        
         let pathUrl = generatePathUrl(origin, waypoints, destination)
         console.log(pathUrl)
 
-        console.log("WAYPOINTS length:")
-        console.log(waypoints.length)
         // if we have waypoints, have Apple Maps use the first one as the destination
         // if no waypoints exist, have Apple Maps use the final destination as the destination
         let appleMapsDestination = waypoints.length ? waypoints[0] : destination
