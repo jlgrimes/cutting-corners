@@ -33,7 +33,9 @@ import Geocode from "react-geocode";
 import { add, max } from 'react-native-reanimated';
 import { withOrientation } from 'react-navigation';
 import { Overlay } from 'react-native-elements';
-import * as Progress from 'react-native-progress';
+
+// i get a weird ART error stupid expo
+//import ProgressCircleSnail from 'react-native-progress/CircleSnail';
 import LOGO from './assets/icon.png';
 
 Geocode.setApiKey(MAPS_API_KEY);
@@ -409,6 +411,8 @@ export default class Home extends Component {
         let appleMapsDestination = waypoints.length ? waypoints[0] : destination
         let applePathUrl = "http://maps.apple.com/?daddr=" + appleMapsDestination.split(" ").join("+")
 
+        this.setState({computing: false})
+
         ActionSheet.show(
             {
                 options: BUTTONS,
@@ -557,6 +561,13 @@ export default class Home extends Component {
 
     }
 
+    editPlace(pos) {
+        this.setState({
+            autocompleteOverlayVisible: true,
+            autocompletePos: pos
+        })
+    }
+
     // deletes either empty space or one with name
     deletePlace(pos) {
         var self = this;
@@ -583,6 +594,11 @@ export default class Home extends Component {
 
     
     onSubmit() {
+        if (this.state.destinations.filter(point => point !== "").length < 2) {
+            showToast("You must enter at least 2 locations!")
+            return;
+        }
+
         console.log("START: " + this.state.destinations[0]);
         console.log("CURRENT ADD: " + this.state.currentAddress);
         
@@ -707,7 +723,7 @@ export default class Home extends Component {
                             <Form >
                                 <View style={styles.innerContainer}>
                                     <CheckBox checked={this.state.returnBackHome} onPress={this.endEqualsStart} />
-                                    <Text>End your route at the starting point</Text>
+                                    <Text>End your route at the starting location</Text>
                                 </View>
 
                                 {this.renderAutocomplete()}
@@ -715,10 +731,16 @@ export default class Home extends Component {
                                 {this.state.destinations.slice(0, -1).map((destinationName, pos) => 
                                 
                                     <Grid style={styles.input}>
-                                        <Col>
-                                            <Item floatingLabel>
-                                                <Label style={{padding: 20,}} class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
-                                                <Input value={destinationName} onChange={(event) => this.onPlaceChange(event, pos)}/>
+                                        <Col >
+                                            <Item button onPress={() => this.editPlace(pos)} >
+                                                <Grid>
+                                                    <Row>
+                                                        <Label style={{paddingTop: 20, paddingBottom: destinationName === "" ? 0 : 20}} class="active">{pos == 0 ? STARTING_PLACE_TEXT : pos < this.state.destinations.length - 1 ? PLACE_TEXT + " " + (pos) : ENDING_PLACE_TEXT}</Label>
+                                                    </Row>
+                                                    <Row>
+                                                        <Text>{destinationName}</Text>
+                                                    </Row>
+                                                </Grid>
                                             </Item>
                                         </Col>
                                         {pos ? <Col style={{width: "15%", top: 25}}>
@@ -746,9 +768,15 @@ export default class Home extends Component {
                             <Form>
                                 <Grid style={styles.input}> 
                                         <Col >
-                                            <Item floatingLabel >
-                                                <Label style={{padding: 20,}} class="active">{ENDING_PLACE_TEXT}</Label>
-                                                <Input {...this.endRouteStyling(this.state.destinations.length - 1)} value={this.state.destinations.slice(-1)[0]} onChange={(event) => this.onPlaceChange(event, this.state.destinations.length - 1)}/>
+                                            <Item button onPress={() => this.state.returnBackHome ? showToast('Cannot edit because you checked "End your route at the starting location".') : this.editPlace(this.state.destinations.length - 1)} >
+                                                <Grid>
+                                                    <Row>
+                                                        <Label style={{paddingTop: 20, paddingBottom: this.state.destinations[this.state.destinations.length - 1] === "" ? 0 : 20}} class="active">{ENDING_PLACE_TEXT}</Label>
+                                                    </Row>
+                                                    <Row>
+                                                        <Text>{this.state.destinations[this.state.destinations.length - 1]}</Text>
+                                                    </Row>
+                                                </Grid>
                                             </Item>
                                         </Col>
                                         <Col style={{width: "15%", top: 25}}>
@@ -768,7 +796,6 @@ export default class Home extends Component {
                             {this.state.computing ? 
                                 <View style={styles.innerContainer}>
                                     <Text>Computing...</Text>
-                                    <Progress.Bar progress={this.state.computingProgress} width={200} />
                                 </View>
                             : null
                             }
