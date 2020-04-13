@@ -42,7 +42,7 @@ Geocode.setApiKey(MAPS_API_KEY);
 
 var BUTTONS = ["Apple Maps", "Google Maps", "Waze", "Cancel"];
 var CANCEL_INDEX = 3;
-var MAX_GENERAL_RESULTS = 4;
+var MAX_GENERAL_RESULTS = 3;
 
 const styles = StyleSheet.create({
     autocompleteContainer: {
@@ -54,46 +54,38 @@ const styles = StyleSheet.create({
         zIndex: 1
       },
     container: {
-        backgroundColor: 'snow',
         flexDirection: 'row',
         height: 100,
         padding: 20,
         justifyContent: "space-between",
     },
     innerContainer: {
-        backgroundColor: 'snow',
         flexDirection: 'row',
         paddingTop: 20,
         paddingBottom: 20,
         justifyContent: "space-evenly",
     },
     title: {
-        backgroundColor: 'snow',
         fontSize: 44,
         fontWeight: "400",
         textAlign: "center"
     },
     subtitle: {
-        backgroundColor: 'snow',
         fontStyle: "italic",
         fontWeight: "300",
         textAlign: "center"
     },
     header: {
-        backgroundColor: 'snow',
         fontSize: 32,
         fontWeight: "400"
     },
     explanationText: {
-        backgroundColor: 'snow',
         textAlign: "center"
     },
     text: {
-        backgroundColor: 'snow',
         textAlign: "center"
     },
     titleBlock: {
-        backgroundColor: 'snow',
         paddingTop: 50,
         paddingBottom: 30,
     },
@@ -666,47 +658,85 @@ export default class Home extends Component {
         })
       };
 
-    renderAutocomplete() {
+      renderAutocomplete() {
         return (
-            <Overlay 
-                overlayStyle={{opacity: 1}}
-                isVisible={this.state.autocompleteOverlayVisible}
-                onBackdropPress={() => this.setState({ autocompleteOverlayVisible: false })}
-            >
-
+          <Overlay
+            overlayStyle={{opacity: 1}}
+            isVisible={this.state.autocompleteOverlayVisible}
+            onBackdropPress={() =>
+              this.setState({autocompleteOverlayVisible: false})
+            }>
             <ListItem
-                onPress={() => (	
-                    this.onAutocompleteSelect(this.state.destinations[this.state.autocompletePos], this.state.autocompletePos, false)	
-                )}	
-                >	
-                <Text>Find best location</Text>	
-            </ListItem>	
-
-            <Autocomplete	
-                autoCorrect={false}	
-                data={this.state.autocomplete}	
-                defaultValue={this.state.destinations[this.state.autocompletePos]}	
-                onChangeText={text => this.onPlaceChangeText(text, this.state.autocompletePos)}
-                placeholder="Enter place"	
-                renderItem={sugg => 
-                    <ListItem
-                        onPress={() => (	
-                            this.onAutocompleteSelect(sugg, this.state.autocompletePos, true)	
-                        )}	
-                        >	
-                        <Text>{sugg}</Text>	
-                    </ListItem>}	
-            />	
-        </Overlay>
-        )
-    }
+              onPress={() => {
+                console.log(this.state.specific);
+                if (this.state.autocompletePos === 0) {
+                  showToast('You must make the first destination specific');
+                } else if (
+                  this.state.autocompletePos ===
+                  this.state.destinations.length - 1
+                ) {
+                  showToast('You must make the last destination specific');
+                } else if (
+                  this.state.specific.filter(el => !el).length > MAX_GENERAL_RESULTS
+                ) {
+                  let resetDests = this.state.destinations;
+                  resetDests[this.state.autocompletePos] = '';
+    
+                  this.setState(
+                    {
+                      autocompleteOverlayVisible: false,
+                      autocomplete: [],
+                      destinations: resetDests,
+                    },
+                    () =>
+                      showToast(
+                        "You can't have more than " +
+                          MAX_GENERAL_RESULTS +
+                          ' general locations',
+                      ),
+                  );
+                } else {
+                  this.onAutocompleteSelect(
+                    this.state.destinations[this.state.autocompletePos],
+                    this.state.autocompletePos,
+                    false,
+                  );
+                }
+              }}>
+              <Text>Find best location</Text>
+            </ListItem>
+    
+            <Autocomplete
+              autoCorrect={false}
+              data={this.state.autocomplete}
+              defaultValue={this.state.destinations[this.state.autocompletePos]}
+              onChangeText={text =>
+                this.onPlaceChangeText(text, this.state.autocompletePos)
+              }
+              placeholder="Enter place"
+              renderItem={sugg => (
+                <ListItem
+                  onPress={() =>
+                    this.onAutocompleteSelect(
+                      sugg,
+                      this.state.autocompletePos,
+                      true,
+                    )
+                  }>
+                  <Text>{sugg}</Text>
+                </ListItem>
+              )}
+            />
+          </Overlay>
+        );
+      }
 
     render() {
         return (
-            <Root style={{backgroundColor: 'snow'}}>
+            <Root>
                 <View style={styles.container}>
-                    <Container style={{backgroundColor: 'snow'}}>
-                        <Content style={{backgroundColor: 'snow'}}>
+                    <Container>
+                        <Content>
                             <View style={styles.titleBlock}>
                                 <Text style={styles.title}>
                                     Cutting Corners
