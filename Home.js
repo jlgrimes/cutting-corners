@@ -493,19 +493,6 @@ export default class Home extends Component {
             });
     }
 
-    onPlaceChange(event, pos) {
-        let destinations = this.state.destinations
-        //destination[pos] = text
-        destinations[pos] = event.nativeEvent.text
-
-        if (this.state.returnBackHome && pos === 0) {
-            destinations[destinations.length - 1] = destinations[0];
-        }
-
-        this.setState({ destinations })
-        // console.log(destinations)
-    }
-
     onPlaceChangeText(text, pos) {
         var destinations = this.state.destinations
         destinations[pos] = text
@@ -522,6 +509,10 @@ export default class Home extends Component {
 
         var destinations = this.state.destinations
         destinations[pos] = sugg
+
+        if (pos == 0 && this.state.returnBackHome) {
+            destinations[destinations.length - 1] = sugg;
+        }
         let specific = this.state.specific;
         specific[pos] = specificFlag;
 
