@@ -33,7 +33,7 @@ import Geocode from "react-geocode";
 import { add, max } from 'react-native-reanimated';
 import { withOrientation } from 'react-navigation';
 import { Overlay } from 'react-native-elements';
-import './style.css';   
+// import './style.css';   
 
 // i get a weird ART error stupid expo
 //import ProgressCircleSnail from 'react-native-progress/CircleSnail';
@@ -53,6 +53,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         right: 0,
         top: 0,
+        paddingTop: 10,
         zIndex: 1
       },
     container: {
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
         textAlign: "center"
     },
     titleBlock: {
-        backgroundColor: 'snow ',
+        // backgroundColor: 'snow ',
         paddingTop: 50,
         paddingBottom: 30,
     },
@@ -469,6 +470,7 @@ export default class Home extends Component {
                     // console.log(data);
                     if (data["status"] != "OK") {
                         showToast('Too many places, please reduce');
+                        console.log(data);
                         return;
                     } else {
                         console.log("\nDISTANCE MATRIX RETURNED STATUS OK\n");
@@ -675,7 +677,13 @@ export default class Home extends Component {
                 isVisible={this.state.autocompleteOverlayVisible}
                 onBackdropPress={() => this.setState({ autocompleteOverlayVisible: false })}
             >
-
+            <ListItem
+                onPress={() => (	
+                    this.onAutocompleteSelect(this.state.destinations[this.state.autocompletePos], this.state.autocompletePos, false)	
+                )}	
+                >	
+                <Text>Find best location</Text>	
+            </ListItem>		   
             <Autocomplete	
                 autoCorrect={false}	
                 data={this.state.autocomplete}	
@@ -691,13 +699,6 @@ export default class Home extends Component {
                         <Text>{sugg}</Text>	
                     </ListItem>}	
             />
-            <ListItem
-                onPress={() => (	
-                    this.onAutocompleteSelect(this.state.destinations[this.state.autocompletePos], this.state.autocompletePos, false)	
-                )}	
-                >	
-                <Text>Find best location</Text>	
-            </ListItem>		
         </Overlay>
         )
     }
